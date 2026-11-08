@@ -17,6 +17,7 @@ import tempfile
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+os.environ.setdefault("REPAIR_TOTAL_S", "1e9")  # many cases in one process: no global repair cap here
 import det_solver  # noqa: E402
 
 TAIL = ("Work only inside the current directory. When you are done, write ONLY the word DONE to the file answer.txt in "
@@ -71,11 +72,13 @@ CASES = [
     ("class method", "class Counter:\n    def __init__(self):\n        self.n = 0\n\n    def inc(self):\n        self.n -= 1\n",
      "c = m.Counter(); c.inc(); c.inc(); self.assertEqual(c.n, 2)", True),
     ("wrong var", "def diff_of(a, b):\n    return a - a\n", "assertEqual(m.diff_of(9, 4), 5)", True),
+    ("capitalize swap", "def cap_words(s):\n    return ' '.join(w.upper() for w in s.split())\n",
+     "assertEqual(m.cap_words('ab cd'), 'Ab Cd')", True),
     ("stray line", "def total_plus(xs):\n    s = 0\n    for x in xs:\n        s += x\n    s += 1\n    return s\n",
      "assertEqual(m.total_plus([1, 2, 3]), 6)", True),
     # --- not one small edit: must stay unsolved (no false DONE) ---
-    ("capitalize (no swap)", "def cap_words(s):\n    return ' '.join(w.upper() for w in s.split())\n",
-     "assertEqual(m.cap_words('ab cd'), 'Ab Cd')", False),
+    ("join separator (no edit gives '-')", "def join_dash(xs):\n    return ''.join(xs)\n",
+     "assertEqual(m.join_dash(['a', 'b']), 'a-b')", False),
     ("two bugs in one fn", "def average2(xs):\n    return sum(xs) // len(xs) + 1\n", "assertEqual(m.average2([1, 2]), 1.5)", False),
     ("missing edge case", "def max_or_none(xs):\n    return max(xs)\n",
      "assertEqual(m.max_or_none([1, 5]), 5); self.assertIsNone(m.max_or_none([]))", False),

@@ -25,7 +25,7 @@ import tempfile
 import textwrap
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Callable, Iterator, List, Optional, Tuple
+from typing import Callable, Iterator, List, Optional, Set, Tuple
 
 # (workspace, timeout) -> (all_passed, score); a smaller score is better (e.g. (failing tests, -depth of the failures))
 Run = Callable[[str, float], Tuple[bool, tuple]]
@@ -41,14 +41,15 @@ _BIN = {
     ast.Pow: [ast.Mult], ast.BitAnd: [ast.BitOr], ast.BitOr: [ast.BitAnd],
 }
 _CALL_SWAP = {
-    "min": ["max"], "max": ["min"], "any": ["all"], "all": ["any"], "sorted": ["reversed"], "reversed": ["sorted"],
+    "min": ["max", "sum"], "max": ["min", "sum"], "any": ["all"], "all": ["any"], "sorted": ["reversed"], "reversed": ["sorted"],
     "sum": ["len", "max", "min"], "len": ["sum"], "floor": ["ceil"], "ceil": ["floor"], "round": ["int"],
     "int": ["round", "float"], "float": ["int"], "ord": ["chr"], "chr": ["ord"],
 }
 _ATTR_SWAP = {
-    "upper": ["lower"], "lower": ["upper"], "lstrip": ["rstrip", "strip"], "rstrip": ["lstrip", "strip"],
+    "upper": ["lower", "capitalize", "title"], "lower": ["upper", "capitalize", "title"],
+    "capitalize": ["title", "upper", "lower"], "lstrip": ["rstrip", "strip"], "rstrip": ["lstrip", "strip"],
     "startswith": ["endswith"], "endswith": ["startswith"], "append": ["insert"], "pop": ["popleft"],
-    "find": ["rfind"], "rfind": ["find"], "title": ["capitalize"], "capitalize": ["title"], "isdigit": ["isalpha"],
+    "find": ["rfind"], "rfind": ["find"], "title": ["capitalize", "upper"], "isdigit": ["isalpha"],
     "isalpha": ["isdigit"], "islower": ["isupper"], "isupper": ["islower"], "sort": ["reverse"],
 }
 _UNWRAP = {"abs", "sorted", "reversed", "list", "set", "int", "float", "round", "str", "tuple", "sum", "len"}
@@ -67,6 +68,92 @@ def _plus(node: ast.expr, d: int) -> ast.expr:
     return ast.BinOp(left=node, op=ast.Add() if d > 0 else ast.Sub(), right=_num(abs(d)))
 
 
+_WRAP_ARG = ("reversed", "sorted", "set", "abs")
+_METH_ARG = ("lower", "upper", "strip", "split")
+_METH_ELT = ("capitalize", "upper", "lower", "strip", "title")
+_AUG = {"+=": ast.Add, "*=": ast.Mult, "-=": ast.Sub}
+
+
+def _call(name: str, arg: ast.expr) -> ast.Call:
+    return ast.Call(func=ast.Name(id=name, ctx=ast.Load()), args=[arg], keywords=[])
+
+
+def _meth(arg: ast.expr, m: str) -> ast.Call:
+    return ast.Call(func=ast.Attribute(value=arg, attr=m, ctx=ast.Load()), args=[], keywords=[])
+
+
+def _is_call_of(e: ast.AST, name: str) -> bool:
+    return isinstance(e, ast.Call) and isinstance(e.func, ast.Name) and e.func.id == name
+
+
+def _neg(e: ast.expr) -> ast.expr:
+    return e.operand if isinstance(e, ast.UnaryOp) and isinstance(e.op, ast.USub) else ast.UnaryOp(op=ast.USub(), operand=e)
+
+
+def _extra_mutations(n: ast.AST, params: Tuple[str, ...]) -> Iterator[Mutation]:
+    """Wrapping an expression, a method call on it, `=` instead of `+=`, a constant that should be a length / the first
+    element, a slice bound on the wrong side, a range without its start, a method used without the call parentheses."""
+    exprish = (ast.Name, ast.Call, ast.Attribute, ast.Subscript)
+    if isinstance(n, ast.Call) and not (isinstance(n.func, ast.Name) and n.func.id == "range"):
+        for k, arg in enumerate(n.args):
+            if isinstance(arg, exprish):
+                for w in _WRAP_ARG:
+                    if not _is_call_of(arg, w):
+                        yield P_NOT, f"wrap arg{k} in {w}()", \
+                            (lambda x, k=k, w=w: x.args.__setitem__(k, _call(w, x.args[k])))
+                for m in _METH_ARG:
+                    yield P_NOT, f"arg{k}.{m}()", (lambda x, k=k, m=m: x.args.__setitem__(k, _meth(x.args[k], m)))
+    if isinstance(n, (ast.For, ast.comprehension)) and isinstance(n.iter, exprish):
+        for w in ("reversed", "sorted", "set"):
+            if not _is_call_of(n.iter, w):
+                yield P_NOT, f"iterate over {w}()", (lambda x, w=w: setattr(x, "iter", _call(w, x.iter)))
+        for m in _METH_ARG:
+            yield P_NOT, f"iter.{m}()", (lambda x, m=m: setattr(x, "iter", _meth(x.iter, m)))
+    if isinstance(n, (ast.GeneratorExp, ast.ListComp, ast.SetComp)) and isinstance(n.elt, ast.Name):
+        for m in _METH_ELT:
+            yield P_NOT, f"element.{m}()", (lambda x, m=m: setattr(x, "elt", _meth(x.elt, m)))
+    if isinstance(n, ast.Return) and isinstance(n.value, exprish):
+        for w in ("abs", "sorted"):
+            if not _is_call_of(n.value, w):
+                yield P_NOT, f"return {w}()", (lambda x, w=w: setattr(x, "value", _call(w, x.value)))
+    if isinstance(n, ast.Expr) and isinstance(n.value, ast.Attribute):
+        yield P_OP, "call the method (missing parentheses)", \
+            (lambda x: setattr(x, "value", ast.Call(func=x.value, args=[], keywords=[])))
+    if isinstance(n, ast.Assign) and len(n.targets) == 1 and isinstance(n.targets[0], ast.Name):
+        if not isinstance(n.value, ast.Constant):
+            for sym, op in _AUG.items():
+                yield P_OP, f"'=' -> '{sym}'", \
+                    (lambda x, op=op: ast.AugAssign(target=x.targets[0], op=op(), value=x.value))
+        elif isinstance(n.value.value, (int, float)) and not isinstance(n.value.value, bool):
+            for p in params:
+                yield P_CONST, f"constant -> {p}[0]", \
+                    (lambda x, p=p: setattr(x, "value", ast.Subscript(value=ast.Name(id=p, ctx=ast.Load()),
+                                                                       slice=ast.Constant(value=0), ctx=ast.Load())))
+                yield P_CONST, f"constant -> {p}[-1]", \
+                    (lambda x, p=p: setattr(x, "value", ast.Subscript(value=ast.Name(id=p, ctx=ast.Load()),
+                                                                       slice=ast.Constant(value=-1), ctx=ast.Load())))
+    if isinstance(n, (ast.BinOp, ast.Assign)):
+        for fld in (("left", "right") if isinstance(n, ast.BinOp) else ("value",)):
+            c = getattr(n, fld)
+            if isinstance(c, ast.Constant) and isinstance(c.value, int) and not isinstance(c.value, bool):
+                for p in params:
+                    yield P_CONST, f"{fld} constant -> len({p})", \
+                        (lambda x, fld=fld, p=p: setattr(x, fld, _call("len", ast.Name(id=p, ctx=ast.Load()))))
+    if isinstance(n, ast.Slice):
+        if n.upper is None and n.lower is not None:
+            yield P_INDEX, "slice: bound to the upper side", \
+                (lambda x: (setattr(x, "upper", x.lower), setattr(x, "lower", None)) and None)
+            yield P_INDEX, "slice: negated bound to the upper side", \
+                (lambda x: (setattr(x, "upper", _neg(x.lower)), setattr(x, "lower", None)) and None)
+        elif n.lower is None and n.upper is not None:
+            yield P_INDEX, "slice: bound to the lower side", \
+                (lambda x: (setattr(x, "lower", x.upper), setattr(x, "upper", None)) and None)
+            yield P_INDEX, "slice: negated bound to the lower side", \
+                (lambda x: (setattr(x, "lower", _neg(x.upper)), setattr(x, "upper", None)) and None)
+    if isinstance(n, ast.Call) and isinstance(n.func, ast.Name) and n.func.id == "range" and len(n.args) == 1:
+        yield P_INDEX, "range(e) -> range(1, e)", (lambda x: setattr(x, "args", [_num(1), x.args[0]]))
+
+
 def _swap_operands(x: ast.BinOp) -> None:
     x.left, x.right = x.right, x.left
 
@@ -75,7 +162,7 @@ def _swap_branches(x: ast.If) -> None:
     x.body, x.orelse = x.orelse, x.body
 
 
-def _node_mutations(n: ast.AST, names: List[str]) -> Iterator[Mutation]:
+def _node_mutations(n: ast.AST, names: List[str], params: Tuple[str, ...] = ()) -> Iterator[Mutation]:
     if isinstance(n, ast.Compare):
         for j, op in enumerate(n.ops):
             for alt in _CMP.get(type(op), []):
@@ -156,6 +243,7 @@ def _node_mutations(n: ast.AST, names: List[str]) -> Iterator[Mutation]:
                         isinstance(st, ast.Expr) and isinstance(st.value, ast.Constant)):
                     yield P_DELETE, f"delete stmt line {st.lineno}", \
                         (lambda x, fld=fld, k=k: _delete(x, fld, k))
+    yield from _extra_mutations(n, params)
 
 
 def _delete(node: ast.AST, fld: str, k: int) -> None:
@@ -186,12 +274,19 @@ def _local_names(fn: ast.AST) -> List[str]:
     return [x for x in out if x not in ("self", "cls", "_")]
 
 
+def _params(fn: ast.AST) -> Tuple[str, ...]:
+    args = getattr(fn, "args", None)
+    if args is None:
+        return ()
+    return tuple(a.arg for a in args.posonlyargs + args.args + args.kwonlyargs if a.arg not in ("self", "cls"))
+
+
 def _enumerate(fn: ast.AST) -> List[Tuple[int, int, str, int]]:
     """[(priority, order, description, walk_index)] for one function."""
-    names = _local_names(fn)
+    names, params = _local_names(fn), _params(fn)
     out = []
     for i, n in enumerate(ast.walk(fn)):
-        for prio, desc, _ in _node_mutations(n, names):
+        for prio, desc, _ in _node_mutations(n, names, params):
             out.append((prio, len(out), desc, i))
     return out
 
@@ -201,7 +296,7 @@ def _build(fn: ast.AST, walk_index: int, desc: str) -> Optional[ast.AST]:
     c = copy.deepcopy(fn)
     nodes = list(ast.walk(c))
     target = nodes[walk_index]
-    for _, d, apply in _node_mutations(target, _local_names(c)):
+    for _, d, apply in _node_mutations(target, _local_names(c), _params(c)):
         if d == desc:
             try:
                 rep = apply(target)
@@ -232,11 +327,14 @@ def _splice(src: str, fn: ast.FunctionDef, new_fn: ast.AST) -> str:
     return "".join(lines[: fn.lineno - 1]) + text + "".join(lines[fn.end_lineno:])
 
 
-def _candidates(src: str) -> List[Tuple[int, int, str, str]]:
-    """[(priority, order, description, mutated_source)] for every single mutation of every function."""
+def _candidates(src: str, only: Optional[Set[str]] = None) -> List[Tuple[int, int, str, str]]:
+    """[(priority, order, description, mutated_source)] for every single mutation of the functions in `only` (all if
+    None)."""
     tree = ast.parse(src)
     out: List[Tuple[int, int, str, str]] = []
     for fn in _functions(tree):
+        if only is not None and fn.name not in only:
+            continue
         for prio, order, desc, idx in _enumerate(fn):
             m = _build(fn, idx, desc)
             if m is None:
@@ -256,11 +354,14 @@ def _candidates(src: str) -> List[Tuple[int, int, str, str]]:
     return uniq
 
 
-def search(src: str, workspace: str, run: Run, score0: tuple, baseline_s: float = 0.2, budget_s: float = 60.0,
-           max_rounds: int = 8, workers: Optional[int] = None) -> Optional[Tuple[str, List[str]]]:
+def search(src: str, workspace: str, run: Run, score0: tuple, baseline_s: float = 0.2, budget_s: float = 30.0,
+           max_rounds: int = 8, workers: Optional[int] = None,
+           focus: Optional[Callable[[str, float], Set[str]]] = None) -> Optional[Tuple[str, List[str]]]:
     """Greedy repair. Returns (fixed_source, [applied mutation descriptions]) or None.
 
     `run(ws, timeout)` runs the tests in directory `ws`; `workspace` is only read (copied), never written.
+    `focus(ws, timeout)` names the functions the failing tests point at; they are tried first in every round and the
+    rest of the file only if that finds nothing.
     """
     deadline = time.monotonic() + budget_s
     # mutants that loop forever are the expensive ones: they can only be cut off by the timeout
@@ -288,23 +389,36 @@ def search(src: str, workspace: str, run: Run, score0: tuple, baseline_s: float 
             for _ in range(max_rounds):
                 if time.monotonic() > deadline:
                     return None
-                try:
-                    cands = _candidates(cur)
-                except Exception:
-                    return None
-                if not cands:
-                    return None
-                cands.sort(key=lambda c: c[:2])  # most natural mutations are evaluated first
+                names: Optional[Set[str]] = None
+                if focus is not None:
+                    d = pool_dirs.get()
+                    try:
+                        with open(os.path.join(d, "mylib.py"), "w", encoding="utf-8") as f:
+                            f.write(cur)
+                        names = focus(d, timeout) or None
+                    except Exception:
+                        names = None
+                    finally:
+                        pool_dirs.put(d)
                 results: List[Tuple[int, tuple, int, str, str, bool]] = []
-                for start in range(0, len(cands), workers * 4):
-                    if time.monotonic() > deadline:
+                for only in ([names, None] if names else [None]):  # the implicated functions first, then everything
+                    try:
+                        cands = _candidates(cur, only)
+                    except Exception:
                         return None
-                    chunk = cands[start:start + workers * 4]
-                    for (prio, order, desc, source), (ok, score) in zip(chunk, ex.map(evaluate, [c[3] for c in chunk])):
-                        if ok or score < scur:
-                            results.append((0 if ok else 1, score, prio * 10 ** 6 + order, desc, source, ok))
-                    if any(r[5] for r in results):
-                        break  # a mutant passes everything: no need to look at the rest
+                    cands.sort(key=lambda c: c[:2])  # most natural mutations are evaluated first
+                    for start in range(0, len(cands), workers * 4):
+                        if time.monotonic() > deadline:
+                            return None
+                        chunk = cands[start:start + workers * 4]
+                        for (prio, order, desc, source), (ok, score) in zip(
+                                chunk, ex.map(evaluate, [c[3] for c in chunk])):
+                            if ok or score < scur:
+                                results.append((0 if ok else 1, score, prio * 10 ** 6 + order, desc, source, ok))
+                        if any(r[5] for r in results):
+                            break  # a mutant passes everything: no need to look at the rest
+                    if results:
+                        break
                 if not results:
                     return None
                 results.sort(key=lambda r: r[:3])  # all-pass first, then best score, then most natural

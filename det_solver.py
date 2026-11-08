@@ -35,6 +35,7 @@ import os
 import re
 import subprocess
 import sys
+import threading
 import time
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Union
@@ -518,6 +519,33 @@ def _run_tests_score(ws: str, timeout: float = 60.0):
     return False, (nfail, -depth)
 
 
+def _failing_funcs(ws: str, timeout: float = 60.0):
+    """Names of the mylib.py functions the failing tests point at: frames inside mylib.py, identifiers in the failing line
+    of the test file, and `test_<name>` method names. Used only to decide which functions to try first."""
+    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp", "PYTHONDONTWRITEBYTECODE": "1"}
+    try:
+        p = subprocess.run(_test_cmd(timeout), cwd=ws, env=env, capture_output=True, text=True, errors="replace",
+                           timeout=timeout)
+        with open(os.path.join(ws, "mylib.py"), encoding="utf-8") as f:
+            defined = {n.name for n in ast.walk(ast.parse(f.read())) if isinstance(n, ast.FunctionDef)}
+    except (subprocess.TimeoutExpired, OSError, SyntaxError):
+        return set()
+    if p.returncode == 0:
+        return set()
+    names = set()
+    for block in re.split(r"^={20,}$", p.stderr, flags=re.M)[1:]:
+        names.update(re.findall(r'File "(?:[^"]*/)?mylib\.py", line \d+, in (\w+)', block))
+        for fn, code in re.findall(r'File "[^"]*test_mylib\.py", line \d+, in (\w+)\n\s*(.+)', block):
+            names.update(re.findall(r"[A-Za-z_]\w*", code))
+            if fn.startswith("test_"):
+                names.add(fn[5:])
+    return names & defined
+
+
+_REPAIR_LOCK = threading.Lock()
+_REPAIR_SPENT = [0.0]  # seconds spent in mutation repair by this process, all tasks together
+
+
 def _write(path: str, src: str) -> None:
     with open(path, "w", encoding="utf-8") as f:
         f.write(src)
@@ -570,7 +598,18 @@ def solve_coding(text: str, workspace: Optional[str]) -> DetResult:
         try:
             # unit tests of helpers are fast; a slow baseline is a runaway loop (memory cap, timeout), not a measure of speed
             base = min(t_base, 0.5)
-            found = repair.search(cur, workspace, _run_tests_score, _run_tests_score(workspace)[1], baseline_s=base)
+            # the det pass is sequential and shares the run's time limit with the LLM stage: cap the total
+            with _REPAIR_LOCK:
+                left = float(os.environ.get("REPAIR_TOTAL_S", "600")) - _REPAIR_SPENT[0]
+            found = None
+            if left >= 3:
+                t_rep = time.monotonic()
+                try:
+                    found = repair.search(cur, workspace, _run_tests_score, _run_tests_score(workspace)[1],
+                                          baseline_s=base, budget_s=min(30.0, left), focus=_failing_funcs)
+                finally:
+                    with _REPAIR_LOCK:
+                        _REPAIR_SPENT[0] += time.monotonic() - t_rep
         except Exception:
             found = None
         if found is not None:
