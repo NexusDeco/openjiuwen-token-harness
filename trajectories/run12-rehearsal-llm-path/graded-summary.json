@@ -1,0 +1,128 @@
+{
+ "correct": 10,
+ "total": 12,
+ "spent_total": 5429.3,
+ "tasks": {
+  "coding_1003": {
+   "type": "coding",
+   "expected": "tests_pass",
+   "answer": "DONE",
+   "correct": true,
+   "spent": 748.1,
+   "steps": 6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "coding_1007": {
+   "type": "coding",
+   "expected": "tests_pass",
+   "answer": "DONE",
+   "correct": true,
+   "spent": 881.4,
+   "steps": 6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "coding_1011": {
+   "type": "coding",
+   "expected": "tests_pass",
+   "answer": "DONE",
+   "correct": true,
+   "spent": 704.2,
+   "steps": 6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "data_analysis_1002": {
+   "type": "data_analysis",
+   "expected": "18",
+   "answer": "18",
+   "correct": true,
+   "spent": 149.1,
+   "steps": 1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "data_analysis_1006": {
+   "type": "data_analysis",
+   "expected": "50",
+   "answer": "50",
+   "correct": true,
+   "spent": 159.1,
+   "steps": 1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "data_analysis_1010": {
+   "type": "data_analysis",
+   "expected": "378",
+   "answer": "378",
+   "correct": true,
+   "spent": 157.0,
+   "steps": 1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "math_1000": {
+   "type": "math",
+   "expected": "1006",
+   "answer": "1006",
+   "correct": true,
+   "spent": 269.4,
+   "steps": 2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "math_1004": {
+   "type": "math",
+   "expected": "900",
+   "answer": "900",
+   "correct": true,
+   "spent": 288.2,
+   "steps": 2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "math_1008": {
+   "type": "math",
+   "expected": "1163",
+   "answer": "1093",
+   "correct": false,
+   "spent": 239.3,
+   "steps": 2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "search_1001": {
+   "type": "search",
+   "expected": "Dune Robotics",
+   "answer": "Dune Robotics",
+   "correct": true,
+   "spent": 450.4,
+   "steps": 4,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "search_1005": {
+   "type": "search",
+   "expected": "2007",
+   "answer": "2007",
+   "correct": true,
+   "spent": 427.8,
+   "steps": 4,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "finished"
+  },
+  "search_1009": {
+   "type": "search",
+   "expected": "1990",
+   "answer": "1994",
+   "correct": false,
+   "spent": 955.3,
+   "steps": 7,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "reason": "max-steps"
+  }
+ },
+ "note": "12 tasks with wordings the deterministic solvers do not recognise, through the real proxy in the image with the organisers' flags (BUDGET=15000 as a guard). Ground truth computed independently of the harness."
+}

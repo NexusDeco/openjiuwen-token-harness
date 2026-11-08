@@ -3,7 +3,8 @@
 
 Uses the organisers' REAL knowledge bases from the sample tasks (search_*/workspace/kb) and an independent ground truth:
 this file parses the markdown itself and walks the graph itself; it shares no code with det_solver. For every person,
-every mentor depth 0..MAXH, every target (born / mentor / headquarters / founded) and three ways of writing the chain
+every mentor depth 0..MAXH, every target (born / mentor name / employer / headquarters / founded), several paraphrases of each question and three
+ways of writing the chain
 ("X's mentor's mentor", "the mentor of the mentor of X", a mix) it asks the solver and compares.
 
     python3 tools/check_search_chains.py <directory with the sample task dirs> [--maxh 5]
@@ -73,30 +74,38 @@ def main() -> int:
                         break
                 p = people[cur]
                 emp = p["Employer"]
-                targets = [
-                    ("born", "In which year was {pe} born?", None, p["Born"]),
-                    ("mentor", "Who is the mentor of {pe}?", None, p["Mentor"]),
-                    ("mentor2", "Who is {pe}'s mentor?", None, p["Mentor"]),
-                    ("hq", "In which city is the headquarters of {ce}?", "employer", comps[emp]["Headquarters"]),
-                    ("founded", "In which year was {ce} founded?", "employer", comps[emp]["Founded"]),
+                # target -> (frames asking for it, how the company is written (None: the person is the subject), expected)
+                person_frames = [
+                    ("born", ["In which year was {x} born?", "In what year was {x} born?", "What year was {x} born?",
+                              "What is the birth year of {x}?"], p["Born"]),
+                    ("mentor", ["Who is the mentor of {x}?", "Who is {x}'s mentor?"], p["Mentor"]),
+                    ("employer", ["Which company employs {x}?", "Who is the employer of {x}?"], emp),
                 ]
-                for tname, tpl, via, expected in targets:
-                    for phrase in chain_phrases(name, k):
-                        if via:
-                            for ce in ((phrase + "'s employer", "the employer of " + phrase)):
-                                yield_q = tpl.format(ce=ce)
-                                r = det_solver.solve_search(det_solver._norm(FRAME.format(q=yield_q)), ws)
-                                stat[(tname, k, r.status)] += 1
-                                if r.status != "answer" or r.answer != expected:
-                                    if r.status == "answer" or r.status == "unsolvable":
-                                        wrong.append((yield_q, expected, r.status, r.answer))
-                        else:
-                            q = tpl.format(pe=phrase)
+                company_frames = [
+                    ("hq", ["In which city is the headquarters of {x}?", "Where is the headquarters of {x}?",
+                            "In which city is {x} headquartered?"], comps[emp]["Headquarters"]),
+                    ("founded", ["In which year was {x} founded?", "In what year was {x} founded?",
+                                 "What is the founding year of {x}?"], comps[emp]["Founded"]),
+                ]
+                for phrase in chain_phrases(name, k):
+                    for tname, frames, expected in person_frames:
+                        for fr in frames:
+                            q = fr.format(x=phrase)
                             r = det_solver.solve_search(det_solver._norm(FRAME.format(q=q)), ws)
                             stat[(tname, k, r.status)] += 1
                             if r.status != "answer" or r.answer != expected:
                                 if r.status in ("answer", "unsolvable"):
                                     wrong.append((q, expected, r.status, r.answer))
+                    for tname, frames, expected in company_frames:
+                        for ce in (phrase + "'s employer", "the employer of " + phrase, "the company where " + phrase + " works",
+                                   "the company that employs " + phrase, "the company " + phrase + " works for"):
+                            for fr in frames:
+                                q = fr.format(x=ce)
+                                r = det_solver.solve_search(det_solver._norm(FRAME.format(q=q)), ws)
+                                stat[(tname, k, r.status)] += 1
+                                if r.status != "answer" or r.answer != expected:
+                                    if r.status in ("answer", "unsolvable"):
+                                        wrong.append((q, expected, r.status, r.answer))
             _ = ok_chain
     total = sum(stat.values())
     by = collections.Counter()
@@ -128,9 +137,11 @@ def main() -> int:
         wrong += [("dangling",)] if bad else []
         # (2) phrasings the grammar must not claim
         for q in ("In which year was the employer of " + start + " born?",
-                  "Who is the employer of " + start + "?",
+                  "Which company employs the employer of " + start + "?",
                   "In which city is the headquarters of the mentor of " + start + "?",
-                  "In which year was " + start + "'s mentor's employer born?"):
+                  "In which year was " + start + "'s mentor's employer born?",
+                  "In which year was the company where the company where " + start + " works works founded?",
+                  "What is the birth year of the company " + start + " works for?"):
             r = det_solver.solve_search(det_solver._norm(FRAME.format(q=q)), kbs[0])
             bad = r.status != "nomatch"
             print(f"nonsense question {q[:62]!r:66s} -> {r.status} {'BAD' if bad else 'ok'}")

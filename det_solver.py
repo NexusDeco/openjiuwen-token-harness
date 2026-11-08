@@ -312,17 +312,28 @@ def _person_expr(s: str):
 def _company_expr(s: str):
     """The employer of a person expression: "X's employer" / 'the employer of X' -> that person's (name, hops)."""
     s = s.strip()
-    m = re.fullmatch(r"the employer of (.+)", s) or re.fullmatch(rf"(.+){_POSS} employer", s)
+    m = (re.fullmatch(r"the employer of (.+)", s) or re.fullmatch(rf"(.+){_POSS} employer", s)
+         or re.fullmatch(r"the company where (.+) works", s) or re.fullmatch(r"the company that employs (.+)", s)
+         or re.fullmatch(r"the company (.+) works for", s))
     return _person_expr(m.group(1)) if m else None
 
 
 # (kind, question frame with one group, parser of that group)
 _S_FRAMES = [
     ("born", re.compile(r"In which year was (.+) born\?"), _person_expr),
+    ("born", re.compile(r"In what year was (.+) born\?"), _person_expr),
+    ("born", re.compile(r"What year was (.+) born\?"), _person_expr),
+    ("born", re.compile(r"What is the birth year of (.+)\?"), _person_expr),
     ("hq", re.compile(r"In which city is the headquarters of (.+)\?"), _company_expr),
+    ("hq", re.compile(r"Where is the headquarters of (.+)\?"), _company_expr),
+    ("hq", re.compile(r"In which city is (.+) headquartered\?"), _company_expr),
     ("founded", re.compile(r"In which year was (.+) founded\?"), _company_expr),
+    ("founded", re.compile(r"In what year was (.+) founded\?"), _company_expr),
+    ("founded", re.compile(r"What is the founding year of (.+)\?"), _company_expr),
     ("mentor", re.compile(r"Who is the mentor of (.+)\?"), _person_expr),
     ("mentor", re.compile(rf"Who is (.+){_POSS} mentor\?"), _person_expr),
+    ("employer", re.compile(r"Which company employs (.+)\?"), _person_expr),
+    ("employer", re.compile(r"Who is the employer of (.+)\?"), _person_expr),
 ]
 _PERSON_KEYS = {"born", "employer", "mentor"}
 _COMPANY_KEYS = {"headquarters", "founded"}
@@ -435,6 +446,8 @@ def solve_search(text: str, workspace: Optional[str]) -> DetResult:
             ans = need(p, "born", cur, True)
         elif kind == "mentor":
             ans = need(p, "mentor", cur, True)
+        elif kind == "employer":
+            ans = need(p, "employer", cur, True)
         else:  # hq / founded: through the person's employer
             emp = need(p, "employer", cur, True)
             ans = need(company(emp), "headquarters" if kind == "hq" else "founded", emp, False)

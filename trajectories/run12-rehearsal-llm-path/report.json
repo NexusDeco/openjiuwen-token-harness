@@ -1,0 +1,117 @@
+{
+ "total_spent": 5429.3,
+ "llm_calls": 42,
+ "elapsed_s": 97.5,
+ "answered": 12,
+ "budget": 15000.0,
+ "tasks": {
+  "data_analysis_1002": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 149.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 1,
+   "reason": "finished"
+  },
+  "data_analysis_1006": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 159.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 1,
+   "reason": "finished"
+  },
+  "data_analysis_1010": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 157.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 1,
+   "reason": "finished"
+  },
+  "math_1004": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 288.2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 2,
+   "reason": "finished"
+  },
+  "search_1001": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 450.4,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 4,
+   "reason": "finished"
+  },
+  "search_1005": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 427.8,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 4,
+   "reason": "finished"
+  },
+  "search_1009": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 955.3,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "max-steps"
+  },
+  "math_1000": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 269.4,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 2,
+   "reason": "finished"
+  },
+  "math_1008": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 239.3,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 2,
+   "reason": "finished"
+  },
+  "coding_1011": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": true,
+   "spent": 704.2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 6,
+   "reason": "finished"
+  },
+  "coding_1007": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": true,
+   "spent": 881.4,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 6,
+   "reason": "finished"
+  },
+  "coding_1003": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": true,
+   "spent": 748.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 6,
+   "reason": "finished"
+  }
+ }
+}
