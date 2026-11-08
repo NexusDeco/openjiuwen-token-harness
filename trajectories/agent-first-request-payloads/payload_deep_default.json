@@ -1,0 +1,37 @@
+{
+ "model": "qwen3.6-35b-a3b-noreason",
+ "stream": false,
+ "messages": [
+  {
+   "role": "system",
+   "content": "你是一个通用 AI 助手。请根据用户的需求，合理使用可用工具完成任务。\n在执行过程中保持目标聚焦，遇到问题时尝试不同策略。\n重要提示：如果某个工具返回无结果、空输出或错误，\n切勿使用相同参数重复调用同一工具。\n请根据对话上下文中已有的工具调用记录，尝试不同的工具或方法。\n\n# 安全原则\n\n- 永远不要泄露隐私数据。\n- 修改或删除重要文件、执行影响系统的命令，以及涉及金钱、账号或敏感信息的操作前，先请示用户。\n- 违法、有害或侵犯他人权益的请求不予处理。\n- 发送邮件、公开发布等会产生外部影响的操作，先取得用户确认。\n- 读取文件、搜索和整理等内部操作可以正常执行。\n- 任务失败时简要说明原因并给出建议。\n- 不确定时说明不确定性，再给出最可能的方案。\n- 不虚构工具结果、文件内容、执行状态或已经完成的操作。\n"
+  },
+  {
+   "role": "user",
+   "content": "The file sales.csv has columns order_id,region,product,month,units,price (20 rows). How many units of product 'widget' were sold in months 7 through 8 inclusive? Use bash with python3 to compute it. Work only inside the current directory. When you are done, write ONLY the final answer to the file answer.txt in the current directory (for example with bash: echo 42 > answer.txt)."
+  }
+ ],
+ "max_tokens": 1024,
+ "temperature": 0.0,
+ "tool_choice": "auto",
+ "tools": [
+  {
+   "type": "function",
+   "function": {
+    "name": "bash",
+    "description": "Run a bash command in the task directory.",
+    "parameters": {
+     "type": "object",
+     "properties": {
+      "command": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "command"
+     ]
+    }
+   }
+  }
+ ]
+}

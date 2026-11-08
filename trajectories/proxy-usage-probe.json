@@ -1,0 +1,286 @@
+{
+ "chat": [
+  {
+   "model": "qwen3.6-35b-a3b-noreason",
+   "status": 200,
+   "response": {
+    "id": "chatcmpl-ad51850def864706",
+    "created": 1794077932,
+    "model": "qwen3.6-35b-a3b-noreason",
+    "object": "chat.completion",
+    "choices": [
+     {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+       "content": "51",
+       "role": "assistant",
+       "provider_specific_fields": {
+        "refusal": null
+       }
+      },
+      "provider_specific_fields": {}
+     }
+    ],
+    "usage": {
+     "completion_tokens": 3,
+     "prompt_tokens": 26,
+     "total_tokens": 29,
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "created_cache_tokens": 0
+     }
+    }
+   },
+   "header_names": [
+    "Alt-Svc",
+    "Connection",
+    "Content-Length",
+    "Content-Type",
+    "Date",
+    "Referrer-Policy",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "X-Frame-Options",
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Limit-Requests",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Remaining-Requests",
+    "X-Xss-Protection"
+   ],
+   "interesting_headers": {
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests": "3",
+    "X-Ratelimit-Api_key-Limit-Requests": "120",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests": "2",
+    "X-Ratelimit-Api_key-Remaining-Requests": "119"
+   }
+  },
+  {
+   "model": "qwen3.8-27b-noreason",
+   "status": 200,
+   "response": {
+    "id": "chatcmpl-95890df9791d8d02",
+    "created": 1794077940,
+    "model": "qwen3.8-27b-noreason",
+    "object": "chat.completion",
+    "choices": [
+     {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+       "content": "51",
+       "role": "assistant",
+       "provider_specific_fields": {
+        "refusal": null
+       }
+      },
+      "provider_specific_fields": {}
+     }
+    ],
+    "usage": {
+     "completion_tokens": 3,
+     "prompt_tokens": 26,
+     "total_tokens": 29,
+     "completion_tokens_details": {
+      "reasoning_tokens": 0
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "created_cache_tokens": 0
+     }
+    }
+   },
+   "header_names": [
+    "Alt-Svc",
+    "Connection",
+    "Content-Length",
+    "Content-Type",
+    "Date",
+    "Referrer-Policy",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "X-Frame-Options",
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Limit-Requests",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Remaining-Requests",
+    "X-Xss-Protection"
+   ],
+   "interesting_headers": {
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests": "3",
+    "X-Ratelimit-Api_key-Limit-Requests": "120",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests": "2",
+    "X-Ratelimit-Api_key-Remaining-Requests": "118"
+   }
+  },
+  {
+   "model": "qwen3.6-35b-a3b",
+   "status": 200,
+   "response": {
+    "id": "chatcmpl-95b3348664f99dc7",
+    "created": 1794077942,
+    "model": "qwen3.6-35b-a3b",
+    "object": "chat.completion",
+    "choices": [
+     {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+       "content": "\n\n51",
+       "role": "assistant",
+       "reasoning_content": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Question: \"What is 17*3?\"\n   - Constraint: \"Answer with just the number.\"\n\n2.  **Calculate:**\n   - 17 * 3 = ?\n   - 10 * 3 = 30\n   - 7 * 3 = 21\n   - 30 + 21 = 51\n   - So, 17 * 3 = 51\n\n3.  **Check Constraint:**\n   - The user explicitly said: \"Answer with just the number.\"\n   - I need to output only \"51\" without any additional text, explanations, or punctuation (unless it's part of the number, but here it's just digits).\n\n4.  **Formulate Output:**\n   - Output: 51\n\n5.  **Final Verification:**\n   - Calculation correct? Yes.\n   - Matches constraint? Yes.\n   - Ready.✅\n",
+       "provider_specific_fields": {
+        "reasoning": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Question: \"What is 17*3?\"\n   - Constraint: \"Answer with just the number.\"\n\n2.  **Calculate:**\n   - 17 * 3 = ?\n   - 10 * 3 = 30\n   - 7 * 3 = 21\n   - 30 + 21 = 51\n   - So, 17 * 3 = 51\n\n3.  **Check Constraint:**\n   - The user explicitly said: \"Answer with just the number.\"\n   - I need to output only \"51\" without any additional text, explanations, or punctuation (unless it's part of the number, but here it's just digits).\n\n4.  **Formulate Output:**\n   - Output: 51\n\n5.  **Final Verification:**\n   - Calculation correct? Yes.\n   - Matches constraint? Yes.\n   - Ready.✅\n",
+        "refusal": null,
+        "reasoning_content": "Here's a thinking process:\n\n1.  **Analyze User Input:**\n   - Question: \"What is 17*3?\"\n   - Constraint: \"Answer with just the number.\"\n\n2.  **Calculate:**\n   - 17 * 3 = ?\n   - 10 * 3 = 30\n   - 7 * 3 = 21\n   - 30 + 21 = 51\n   - So, 17 * 3 = 51\n\n3.  **Check Constraint:**\n   - The user explicitly said: \"Answer with just the number.\"\n   - I need to output only \"51\" without any additional text, explanations, or punctuation (unless it's part of the number, but here it's just digits).\n\n4.  **Formulate Output:**\n   - Output: 51\n\n5.  **Final Verification:**\n   - Calculation correct? Yes.\n   - Matches constraint? Yes.\n   - Ready.✅\n"
+       }
+      },
+      "provider_specific_fields": {}
+     }
+    ],
+    "usage": {
+     "completion_tokens": 227,
+     "prompt_tokens": 24,
+     "total_tokens": 251,
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "created_cache_tokens": 0
+     }
+    }
+   },
+   "header_names": [
+    "Alt-Svc",
+    "Connection",
+    "Content-Length",
+    "Content-Type",
+    "Date",
+    "Referrer-Policy",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "X-Frame-Options",
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Limit-Requests",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Remaining-Requests",
+    "X-Xss-Protection"
+   ],
+   "interesting_headers": {
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests": "3",
+    "X-Ratelimit-Api_key-Limit-Requests": "120",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests": "2",
+    "X-Ratelimit-Api_key-Remaining-Requests": "117"
+   }
+  },
+  {
+   "model": "qwen3.8-27b",
+   "status": 200,
+   "response": {
+    "id": "chatcmpl-bb00d539c6eac394",
+    "created": 1794077948,
+    "model": "qwen3.8-27b",
+    "object": "chat.completion",
+    "choices": [
+     {
+      "finish_reason": "stop",
+      "index": 0,
+      "message": {
+       "content": "\n\n51",
+       "role": "assistant",
+       "reasoning_content": "The user wants me to calculate 17*3 and respond with just the number.\n\n17 * 3 = 51\n",
+       "provider_specific_fields": {
+        "refusal": null,
+        "reasoning": "The user wants me to calculate 17*3 and respond with just the number.\n\n17 * 3 = 51\n",
+        "reasoning_content": "The user wants me to calculate 17*3 and respond with just the number.\n\n17 * 3 = 51\n"
+       }
+      },
+      "provider_specific_fields": {}
+     }
+    ],
+    "usage": {
+     "completion_tokens": 34,
+     "prompt_tokens": 54,
+     "total_tokens": 88,
+     "completion_tokens_details": {
+      "reasoning_tokens": 29
+     },
+     "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "created_cache_tokens": 0
+     }
+    }
+   },
+   "header_names": [
+    "Alt-Svc",
+    "Connection",
+    "Content-Length",
+    "Content-Type",
+    "Date",
+    "Referrer-Policy",
+    "Strict-Transport-Security",
+    "X-Content-Type-Options",
+    "X-Frame-Options",
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Limit-Requests",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests",
+    "X-Ratelimit-Api_key-Remaining-Requests",
+    "X-Xss-Protection"
+   ],
+   "interesting_headers": {
+    "X-Ratelimit-Api_key-Limit-Max_parallel_requests": "3",
+    "X-Ratelimit-Api_key-Limit-Requests": "120",
+    "X-Ratelimit-Api_key-Remaining-Max_parallel_requests": "2",
+    "X-Ratelimit-Api_key-Remaining-Requests": "116"
+   }
+  }
+ ],
+ "stream": {
+  "status": 200,
+  "chunks": 4,
+  "usage_chunks": [
+   {
+    "completion_tokens": 3,
+    "prompt_tokens": 26,
+    "total_tokens": 29,
+    "completion_tokens_details": {
+     "reasoning_tokens": 0
+    },
+    "prompt_tokens_details": {
+     "cached_tokens": 0,
+     "created_cache_tokens": 0
+    }
+   }
+  ]
+ },
+ "probes": [
+  {
+   "path": "/usage",
+   "status": 403,
+   "body": "Forbidden"
+  },
+  {
+   "path": "/balance",
+   "status": 403,
+   "body": "Forbidden"
+  },
+  {
+   "path": "/credits",
+   "status": 403,
+   "body": "Forbidden"
+  },
+  {
+   "path": "/key",
+   "status": 403,
+   "body": "Forbidden"
+  },
+  {
+   "path": "/me",
+   "status": 403,
+   "body": "Forbidden"
+  },
+  {
+   "path": "/dashboard/billing/usage",
+   "status": 403,
+   "body": "Forbidden"
+  }
+ ]
+}

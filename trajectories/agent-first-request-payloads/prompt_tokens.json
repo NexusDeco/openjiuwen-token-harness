@@ -1,0 +1,15 @@
+{
+ "what": "prompt_tokens of the FIRST model call for the same task (data_analysis_0002), measured by replaying each captured request on the real proxy with max_tokens=1",
+ "model": "qwen3.6-35b-a3b-noreason",
+ "prompt_tokens": {
+  "hand-written loop (solver.py, SYSTEM + one bash tool)": 452,
+  "ReActAgent, empty system prompt (payload_react_bare.json)": 362,
+  "ReActAgent + our system prompt (payload_react_sys.json)": 452,
+  "DeepAgent defaults, image probe off (payload_deep_default.json)": 568,
+  "DeepAgent without security/anomaly rails (payload_deep_min.json)": 434
+ },
+ "notes": [
+  "DeepAgent with enable_read_image_multimodal=None additionally sends a separate image-probe request at start-up (not counted above)",
+  "payload files are the exact first requests captured from a local mock server"
+ ]
+}

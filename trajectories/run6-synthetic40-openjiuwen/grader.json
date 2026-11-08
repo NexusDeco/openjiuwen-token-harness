@@ -1,0 +1,448 @@
+{
+ "coding_0100": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 4,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "eee6c0ae34d3131c0d4682afdc1ba5bc5a1e5c8bb08e335532abe70bdf60bc65",
+  "bugs": [
+   "average",
+   "count_even",
+   "first_n"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "first_n",
+   "maximum",
+   "reverse_words",
+   "total"
+  ],
+  "contradiction": null
+ },
+ "data_analysis_0101": {
+  "kind": "units",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 1,
+  "expected": "160",
+  "check": "exact_int"
+ },
+ "coding_0102": {
+  "kind": "contradictory_cross",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 1,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "615ade5d37ae9b2900521cf303e322420eac2aa4bdc352fcdd0eb9d520bb1dd8",
+  "bugs": [
+   "count_even",
+   "first_n",
+   "reverse_words"
+  ],
+  "functions": [
+   "count_even",
+   "first_n",
+   "maximum",
+   "reverse_words",
+   "total"
+  ],
+  "contradiction": "cross-method"
+ },
+ "data_analysis_0103": {
+  "kind": "units",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "587",
+  "check": "exact_int"
+ },
+ "coding_0104": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 5,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "6a2efecd23fb5aa1303545268fcfe1a7eb5a27be7ca6675069153e66fa11a086",
+  "bugs": [
+   "average"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "first_n",
+   "maximum",
+   "reverse_words"
+  ],
+  "contradiction": null
+ },
+ "coding_0105": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 5,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "792469a063878658cbe95d7da2fcb51f22871f42657097a505a00beb60c897ed",
+  "bugs": [
+   "maximum",
+   "reverse_words"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "maximum",
+   "reverse_words",
+   "total"
+  ],
+  "contradiction": null
+ },
+ "search_0106": {
+  "kind": "hq",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "Bern",
+  "check": "exact_str"
+ },
+ "math_0107": {
+  "kind": "chain",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "21",
+  "check": "exact_int"
+ },
+ "search_0108": {
+  "kind": "birth",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 4,
+  "expected": "1958",
+  "check": "exact_str"
+ },
+ "math_0109": {
+  "kind": "chain",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 5,
+  "expected": "54",
+  "check": "exact_int"
+ },
+ "math_0110": {
+  "kind": "chain",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 2,
+  "expected": "313",
+  "check": "exact_int"
+ },
+ "search_0111": {
+  "kind": "absent",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 2,
+  "expected": null,
+  "check": "exact_str"
+ },
+ "search_0112": {
+  "kind": "mentor_born",
+  "solvable": true,
+  "variant": "probe",
+  "reward": 2,
+  "expected": "1981",
+  "check": "exact_str"
+ },
+ "data_analysis_0113": {
+  "kind": "units",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "535",
+  "check": "exact_int"
+ },
+ "math_0114": {
+  "kind": "underdetermined",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 1,
+  "expected": null,
+  "check": "exact_int"
+ },
+ "math_0115": {
+  "kind": "underdetermined",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 4,
+  "expected": null,
+  "check": "exact_int"
+ },
+ "data_analysis_0116": {
+  "kind": "units",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 5,
+  "expected": "344",
+  "check": "exact_int"
+ },
+ "data_analysis_0117": {
+  "kind": "revenue",
+  "solvable": true,
+  "variant": "probe",
+  "reward": 2,
+  "expected": "680",
+  "check": "exact_int"
+ },
+ "math_0118": {
+  "kind": "simple",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 1,
+  "expected": "2234",
+  "check": "exact_int"
+ },
+ "coding_0119": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "1c63c1a96272755bc827b5df8f37c8f3795a746b32b6fd729499e922f82af3d3",
+  "bugs": [
+   "reverse_words",
+   "total"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "reverse_words",
+   "total"
+  ],
+  "contradiction": null
+ },
+ "data_analysis_0120": {
+  "kind": "revenue",
+  "solvable": true,
+  "variant": "probe",
+  "reward": 3,
+  "expected": "14279",
+  "check": "exact_int"
+ },
+ "search_0121": {
+  "kind": "birth",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 4,
+  "expected": "1957",
+  "check": "exact_str"
+ },
+ "math_0122": {
+  "kind": "simple",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "1144",
+  "check": "exact_int"
+ },
+ "coding_0123": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "87d2db23f87f9e98a9773f3a6d42173d988b99c88a454b564acaf7b4a0d975e6",
+  "bugs": [
+   "average"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "first_n",
+   "total"
+  ],
+  "contradiction": null
+ },
+ "data_analysis_0124": {
+  "kind": "missing_column",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 5,
+  "expected": null,
+  "check": "exact_int"
+ },
+ "search_0125": {
+  "kind": "hq",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 2,
+  "expected": "Osaka",
+  "check": "exact_str"
+ },
+ "math_0126": {
+  "kind": "simple",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 2,
+  "expected": "1594",
+  "check": "exact_int"
+ },
+ "coding_0127": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 1,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "14d5e7e5dbd7a89cddcb9aae7b8444a9ac3eb80c6dbe9989352aa6254f13dc9b",
+  "bugs": [
+   "average"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "first_n",
+   "reverse_words"
+  ],
+  "contradiction": null
+ },
+ "coding_0128": {
+  "kind": "contradictory_same",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 5,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "6ad52ebbde3260054bde696c99b8b3709c006d6ac0078c77bf2068165d973948",
+  "bugs": [
+   "maximum"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "first_n",
+   "maximum",
+   "reverse_words",
+   "total"
+  ],
+  "contradiction": "same-method"
+ },
+ "search_0129": {
+  "kind": "employer_missing",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 3,
+  "expected": null,
+  "check": "exact_str"
+ },
+ "data_analysis_0130": {
+  "kind": "units",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 1,
+  "expected": "270",
+  "check": "exact_int"
+ },
+ "math_0131": {
+  "kind": "simple",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 2,
+  "expected": "861",
+  "check": "exact_int"
+ },
+ "search_0132": {
+  "kind": "hq",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 4,
+  "expected": "Gdansk",
+  "check": "exact_str"
+ },
+ "search_0133": {
+  "kind": "mentor_hq",
+  "solvable": true,
+  "variant": "probe",
+  "reward": 1,
+  "expected": "Tartu",
+  "check": "exact_str"
+ },
+ "data_analysis_0134": {
+  "kind": "units",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 3,
+  "expected": "177",
+  "check": "exact_int"
+ },
+ "search_0135": {
+  "kind": "birth",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 2,
+  "expected": "1978",
+  "check": "exact_str"
+ },
+ "math_0136": {
+  "kind": "chain",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 1,
+  "expected": "210",
+  "check": "exact_int"
+ },
+ "coding_0137": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 1,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "104f084d3fc481938b38b9be13a1bc0daaee55fc9157b0424e71e6e603b9447f",
+  "bugs": [
+   "total"
+  ],
+  "functions": [
+   "average",
+   "first_n",
+   "maximum",
+   "total"
+  ],
+  "contradiction": null
+ },
+ "coding_0138": {
+  "kind": "solvable",
+  "solvable": true,
+  "variant": "sample",
+  "reward": 5,
+  "expected": "tests_pass",
+  "check": "unittest",
+  "test_sha256": "6413fd3c386ca70b4b2acf3297adbcdc8c4db3a5f2817780449b88c97f03f0ef",
+  "bugs": [
+   "average",
+   "count_even",
+   "total"
+  ],
+  "functions": [
+   "average",
+   "count_even",
+   "maximum",
+   "reverse_words",
+   "total"
+  ],
+  "contradiction": null
+ },
+ "data_analysis_0139": {
+  "kind": "missing_column",
+  "solvable": false,
+  "variant": "guess",
+  "reward": 4,
+  "expected": null,
+  "check": "exact_int"
+ }
+}

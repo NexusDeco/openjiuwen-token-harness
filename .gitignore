@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+# never commit credentials or run outputs
+.env
+*.env
+.ojw_env
+out/
+logs/
+solutions*.json
+*.report.json

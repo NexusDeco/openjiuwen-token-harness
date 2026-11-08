@@ -1,0 +1,35 @@
+{
+ "model": "qwen3.6-35b-a3b-noreason",
+ "stream": false,
+ "messages": [
+  {
+   "role": "system",
+   "content": "You solve one task inside the current working directory using the bash tool. Keep commands short and their output small. Follow the task instructions exactly, including writing the final answer to answer.txt. When finished, reply with the single word DONE. If the task cannot be solved because required data or files are missing, or its requirements contradict each other, do not guess and do not work around it: reply with exactly IMPOSSIBLE and nothing else."
+  },
+  {
+   "role": "user",
+   "content": "The file sales.csv has columns order_id,region,product,month,units,price (20 rows). How many units of product 'widget' were sold in months 7 through 8 inclusive? Use bash with python3 to compute it. Work only inside the current directory. When you are done, write ONLY the final answer to the file answer.txt in the current directory (for example with bash: echo 42 > answer.txt)."
+  }
+ ],
+ "tool_choice": "auto",
+ "tools": [
+  {
+   "type": "function",
+   "function": {
+    "name": "bash",
+    "description": "Run a bash command in the task directory.",
+    "parameters": {
+     "type": "object",
+     "properties": {
+      "command": {
+       "type": "string"
+      }
+     },
+     "required": [
+      "command"
+     ]
+    }
+   }
+  }
+ ]
+}

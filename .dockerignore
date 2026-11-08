@@ -1,0 +1,10 @@
+# Only the harness modules and requirements.txt are needed in the image.
+__pycache__/
+*.pyc
+.git/
+.gitignore
+.dockerignore
+README.md
+requirements.in
+trajectories/
+tools/

@@ -1,0 +1,354 @@
+{
+ "total_spent": 24581.2,
+ "llm_calls": 166,
+ "elapsed_s": 159.9,
+ "answered": 35,
+ "budget": 28000.0,
+ "tasks": {
+  "coding_0102": {
+   "status": "skipped",
+   "reason": "unlikely solvable (contradictory-tests:m.first_n([12, 28, 4, 3], 3)==[12, 28, 4]|[12, 28, 4, 0])"
+  },
+  "search_0111": {
+   "status": "skipped",
+   "reason": "unlikely solvable (entity-not-in-kb:Wanda Quimby)"
+  },
+  "search_0129": {
+   "status": "skipped",
+   "reason": "unlikely solvable (employer-not-in-kb:Bluefin Systems)"
+  },
+  "math_0109": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 423.5,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "data_analysis_0124": {
+   "status": "no-answer",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 1488.9,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 5,
+   "reason": "max-steps"
+  },
+  "data_analysis_0139": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 306.8,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "math_0115": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 369.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 2,
+   "reason": "answer-from-final-text"
+  },
+  "data_analysis_0113": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 305.5,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "data_analysis_0103": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 305.5,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "data_analysis_0134": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 308.6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "data_analysis_0120": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 308.6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "search_0108": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 391.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 4,
+   "reason": "finished"
+  },
+  "search_0121": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 392.3,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 4,
+   "reason": "finished"
+  },
+  "search_0132": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 529.5,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 5,
+   "reason": "finished"
+  },
+  "data_analysis_0116": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 310.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "math_0107": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 429.3,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "math_0122": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 267.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "search_0106": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 522.2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 5,
+   "reason": "finished"
+  },
+  "data_analysis_0117": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 311.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "math_0110": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 386.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "math_0126": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 270.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "math_0131": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 265.7,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "search_0112": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 533.8,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 5,
+   "reason": "finished"
+  },
+  "search_0135": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 391.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 4,
+   "reason": "finished"
+  },
+  "search_0125": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 524.6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 5,
+   "reason": "finished"
+  },
+  "coding_0104": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": true,
+   "spent": 900.2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  },
+  "coding_0105": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": true,
+   "spent": 1113.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  },
+  "coding_0100": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": true,
+   "spent": 1319.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  },
+  "data_analysis_0101": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 313.3,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "data_analysis_0130": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 308.5,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "coding_0128": {
+   "status": "no-answer",
+   "reward": 5.0,
+   "verified": false,
+   "spent": 3408.5,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 9,
+   "reason": "impossible"
+  },
+  "math_0118": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 270.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "coding_0138": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": true,
+   "spent": 1259.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  },
+  "math_0136": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 515.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "coding_0119": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": true,
+   "spent": 1079.6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  },
+  "math_0114": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 1452.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 5,
+   "reason": "finished"
+  },
+  "search_0133": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 710.6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 6,
+   "reason": "finished"
+  },
+  "coding_0127": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": true,
+   "spent": 865.0,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  },
+  "coding_0123": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": true,
+   "spent": 874.2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  },
+  "coding_0137": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": true,
+   "spent": 852.7,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "finished"
+  }
+ }
+}
