@@ -1,0 +1,329 @@
+{
+ "total_spent": 0.0,
+ "llm_calls": 0,
+ "elapsed_s": 2.2,
+ "answered": 32,
+ "budget": 100000.0,
+ "tasks": {
+  "coding_0100": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0102": {
+   "status": "skipped",
+   "reason": "deterministic: coding: contradictory-tests:m.first_n([12, 28, 4, 3], 3)==[12, 28, 4]|[12, 28, 4, 0]"
+  },
+  "coding_0104": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0105": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0119": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0123": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0127": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0128": {
+   "status": "skipped",
+   "reason": "deterministic: coding: contradictory-tests:m.count_even([24, 9, 16, 23, 11])==2|3"
+  },
+  "coding_0137": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0138": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "data_analysis_0101": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0103": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0113": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0116": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0117": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0120": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0124": {
+   "status": "skipped",
+   "reason": "deterministic: data: sales.csv has no 'discount' column"
+  },
+  "data_analysis_0130": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0134": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0139": {
+   "status": "skipped",
+   "reason": "deterministic: data: sales.csv has no 'profit' column"
+  },
+  "math_0107": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0109": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0110": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0114": {
+   "status": "skipped",
+   "reason": "deterministic: math: an unspecified quantity"
+  },
+  "math_0115": {
+   "status": "skipped",
+   "reason": "deterministic: math: an unspecified quantity"
+  },
+  "math_0118": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0122": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0126": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0131": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0136": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "search_0106": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0108": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0111": {
+   "status": "skipped",
+   "reason": "deterministic: search: Wanda Quimby is not in the kb"
+  },
+  "search_0112": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0121": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0125": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0129": {
+   "status": "skipped",
+   "reason": "deterministic: search: Bluefin Systems is not in the kb"
+  },
+  "search_0132": {
+   "status": "answered",
+   "reward": 4.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0133": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0135": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  }
+ }
+}

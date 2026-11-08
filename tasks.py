@@ -58,7 +58,9 @@ def missing_files(task: Task) -> List[str]:
     A *signal*, not proof of an unsolvable task (regexes can misfire), so the planner only lowers p(success).
     """
     names = {m for m in FILE_RE.findall(task.instruction)} | {m + "/" for m in DIR_RE.findall(task.instruction)}
-    names.discard("answer.txt")
+    # Files the boilerplate talks about but that never live in the workspace: the answer file we write, task.json that
+    # sits next to it ("write the answer next to task.json"), and the workspace directory itself.
+    names -= {"answer.txt", "task.json", "workspace/"}
     base = task.workspace
     return sorted(n for n in names if base is None or not os.path.exists(os.path.join(base, n)))
 

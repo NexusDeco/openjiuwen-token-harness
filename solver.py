@@ -126,7 +126,7 @@ def normalize_answer(a: Optional[str]) -> Optional[str]:
     return m.group(1) if m else s
 
 
-def answer_ready(cwd: str, last_tool_output: str = "") -> bool:
+def answer_ready(cwd: str, last_tool_output: str = "", also_dir: Optional[str] = None) -> bool:
     """True when the attempt can end WITHOUT another model call whose only job is to say DONE.
 
     Every task used to finish with a separate call (the whole history is sent again) in which the model just writes
@@ -134,7 +134,8 @@ def answer_ready(cwd: str, last_tool_output: str = "") -> bool:
     is deleted at the start of every attempt), the last command did not fail or time out, and the local tests, if the
     workspace has any, pass. If a test fails the conversation simply continues, so correctness does not change.
     """
-    if _read_answer(cwd) is None:
+    # also_dir: the task directory. If the instruction says "next to task.json" a model may write ../answer.txt.
+    if _read_answer(cwd) is None and (also_dir is None or _read_answer(also_dir) is None):
         return False
     tail = (last_tool_output or "")[-80:]
     if re.search(r"\[exit \d+\]\s*$", tail) or "[timeout after" in tail:
@@ -174,14 +175,16 @@ class BaseSolver:
                     reason = "budget"
                     break
                 _remove_answer(cwd)  # a stale answer from a failed tier must not count
+                _remove_answer(task.dir)
                 messages: List[Dict[str, Any]] = [{"role": "system", "content": SYSTEM},
                                                   {"role": "user", "content": task.instruction}]
                 steps, reason, final_text = self._attempt(task, cwd, model, messages)
                 attempts.append({"model": model, "reason": reason, "messages": messages})
-                answer, verified = _read_answer(cwd), verify(cwd)
+                answer, verified = _read_answer(cwd) or _read_answer(task.dir), verify(cwd)
                 if _is_impossible(answer) or _is_impossible(final_text):
                     # Explicit give-up: write nothing, never escalate (a stronger model cannot invent missing data).
                     _remove_answer(cwd)
+                    _remove_answer(task.dir)
                     answer, reason = None, "impossible"
                     break
                 if answer is None and verified:
@@ -243,7 +246,7 @@ class ToolLoopSolver(BaseSolver):
                 except (KeyError, TypeError, ValueError):
                     out = "error: tool arguments must be JSON like {\"command\": \"...\"}"
                 messages.append({"role": "tool", "tool_call_id": c.get("id", ""), "content": out})
-            if self.auto_stop and answer_ready(cwd, out):
+            if self.auto_stop and answer_ready(cwd, out, task.dir):
                 messages.append({"role": "assistant", "content": "DONE"})  # not a model call: nothing is charged
                 return step, "finished", "DONE"
         return cap, "max-steps", final_text

@@ -2,21 +2,30 @@
 """Deterministic (no-LLM) solvers for the task templates seen in the organisers' samples. Cost: 0 tokens.
 
 The organisers allow it ("можно решить все, если получится"). The design rule is: a solver answers only when the
-WHOLE instruction matches a known template word for word (anchored regexes, the standard boilerplate suffix included)
-and the data it relies on is consistent (header, row count, unambiguous lookups). Anything else returns `nomatch`
-and the task goes to the LLM engine exactly as before. A wrong parse is therefore much less likely than a
-refusal; refusals only cost tokens.
+QUESTION matches a known template word for word (anchored regexes) and the data it relies on is consistent (header,
+row count, unambiguous lookups). Anything else returns `nomatch` and the task goes to the LLM engine exactly as
+before. A wrong parse is therefore much less likely than a refusal; refusals only cost tokens.
+
+Only the boilerplate around the question is read tolerantly: the trailing "Work only inside ... write ONLY the final
+answer to the file answer.txt <where>" may word its location differently (the organisers said the file goes next to
+task.json, so that sentence may change), and imperative hint sentences without numbers ("Compute it ...", "Use bash
+...") may be reworded. Any other file name, a path, or a number in a hint still means `nomatch`.
 
 Results: `answer` (write answer.txt), `unsolvable` (the template matched but the data provably cannot answer it:
 do NOT create answer.txt), `nomatch` (hand the task to the LLM).
 
   math          warehouse stories: start / ships X per day for D days / receives R deliveries of Q / split into K
-                keeping one share (floor) / doubled; a sentence with an "unknown number" makes the task unsolvable
-  data_analysis sales.csv: units of a product in a month range (optionally in a region), revenue of product in region
+                keeping one share (floor) / doubled. Numbers may be written as words. A vague quantity ("an unknown
+                number of", "several", "some") in one of these sentences makes the task unsolvable
+  data_analysis sales.csv: units of a product in a month range (optionally in a region), revenue of product in region;
+                unsolvable when the question needs a column the file does not have, or asks about a concept (discount,
+                tax, profit ...) that is not a column
   search        kb/ markdown base: born / employer's headquarters / mentor's birth year / employer of the mentor /
-                mentor's name / employer's founding year; a missing entity makes the task unsolvable
-  coding        mylib.py + test_mylib.py: replaces known functions (a small library of canonical implementations)
-                one by one while the number of failing tests drops; only if ALL tests pass it answers DONE
+                mentor's name / employer's founding year; unsolvable when the person or company is missing from the
+                kb, or its record exists but lacks the needed field
+  coding        mylib.py + test_mylib.py: unsolvable when the tests cannot pass (see prechecks.tests_flags); otherwise
+                replaces known functions (a small library of canonical implementations) one by one while the number of
+                failing tests drops, and answers DONE only if ALL tests pass
 """
 from __future__ import annotations
 
@@ -27,14 +36,10 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Union
 
+from prechecks import tests_flags
 from tasks import Task
-
-SUFFIX = ("Work only inside the current directory. When you are done, write ONLY the final answer to the file "
-          "answer.txt in the current directory (for example with bash: echo 42 > answer.txt).")
-SUFFIX_DONE = ("Work only inside the current directory. When you are done, write ONLY the word DONE to the file "
-               "answer.txt in the current directory (for example with bash: echo 42 > answer.txt).")
 
 
 @dataclass
@@ -45,6 +50,10 @@ class DetResult:
     solver: str = ""
 
 
+class _NoMatch(Exception):
+    pass
+
+
 def _nomatch(why: str = "") -> DetResult:
     return DetResult("nomatch", why=why)
 
@@ -53,65 +62,157 @@ def _norm(s: str) -> str:
     return " ".join(s.split())
 
 
+# ------------------------------------------------------------------------------------------------ boilerplate
+_TAIL_RX = re.compile(r"Work only inside the current directory\. When you are done, write ONLY the "
+                      r"(?P<what>final answer|word DONE) to the file answer\.txt(?P<where>[^(]*?)"
+                      r"(?: \(for example with bash: echo 42 > answer\.txt\))?\.?")
+_HINT_START = re.compile(r"(?:Compute|Calculate|Use|Find|Run|Solve)\b")
+
+
+def _before_tail(text: str, what: str) -> Optional[str]:
+    """The part of the instruction before the standard trailing boilerplate, or None if that boilerplate is not the
+    familiar 'write the answer to answer.txt' kind (a different file name or a path is rejected)."""
+    i = text.find("Work only inside the current directory")
+    if i < 0:
+        return None
+    m = _TAIL_RX.fullmatch(text[i:].strip())
+    if not m or m.group("what") != what:
+        return None
+    where = m.group("where")
+    if "/" in where or any(f != "task.json" for f in re.findall(r"[\w-]+\.(?:txt|json|csv|md|py)\b", where)):
+        return None
+    return text[:i].strip()
+
+
+def _question_part(text: str) -> Optional[str]:
+    """Instruction without the tail and without trailing imperative hint sentences; ends with the question's '?'."""
+    core = _before_tail(text, "final answer")
+    if core is None:
+        return None
+    q = core.rfind("?")
+    if q < 0:
+        return None
+    hints = core[q + 1:].strip()
+    for s in (re.split(r"(?<=[.?])\s+", hints) if hints else []):
+        if not _HINT_START.match(s) or re.search(r"\d", s.replace("python3", "python")):
+            return None
+    return core[: q + 1]
+
+
 # ------------------------------------------------------------------------------------------------ math
-_M_START = re.compile(r"A warehouse starts with (\d+) boxes")
-_M_SPLIT = re.compile(r"Then the stock is split equally into (\d+) warehouses and it keeps one share \(rounded down\)")
+_UNITS = {w: i for i, w in enumerate(
+    "zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen "
+    "eighteen nineteen".split())}
+_TENS = {"twenty": 20, "thirty": 30, "forty": 40, "fifty": 50, "sixty": 60, "seventy": 70, "eighty": 80, "ninety": 90}
+_VAGUE = re.compile(r"(?:some|several|many|few|a few|numerous|multiple|various|unknown|unspecified|"
+                    r"(?:an? )?(?:unknown|unspecified|certain|undisclosed|unstated) (?:number|amount)(?: of)?|"
+                    r"a number of|a (?:number|couple) of)", re.I)
+
+
+def _words_to_int(s: str) -> Optional[int]:
+    toks = s.lower().replace("-", " ").split()
+    if not toks:
+        return None
+    cur = 0
+    for w in toks:
+        if w in _UNITS:
+            cur += _UNITS[w]
+        elif w in _TENS:
+            cur += _TENS[w]
+        elif w == "hundred":
+            cur = max(cur, 1) * 100
+        else:
+            return None
+    return cur
+
+
+def _qty(s: str) -> Union[int, str]:
+    """A number (digits or words), or "vague" for an unspecified quantity; anything else is not our template."""
+    s = s.strip()
+    if s.isdigit():
+        return int(s)
+    n = _words_to_int(s)
+    if n is not None:
+        return n
+    if _VAGUE.fullmatch(s):
+        return "vague"
+    raise _NoMatch(f"unrecognised quantity {s[:30]!r}")
+
+
+_Q = r"[A-Za-z0-9][A-Za-z0-9 -]*?"
+_M_START = re.compile(rf"A warehouse starts with (?P<n>{_Q}) boxes")
+_M_SPLIT = re.compile(rf"Then the stock is split equally into (?P<k>{_Q}) warehouses and it keeps one share \(rounded down\)")
 _M_DOUBLE = re.compile(r"Then the stock is doubled by merging with a sister warehouse")
-_M_SHIP = re.compile(r"It ships (\d+) boxes per day for (\d+) days?")
-_M_RECV = re.compile(r"It receives (\d+) deliver(?:y|ies) of (\d+) boxes each")
-_M_SHIP_UNKNOWN = re.compile(r"It ships an unknown (?:number|amount) of boxes per day for (\d+) days?")
-_M_BODY = re.compile(r"(?P<pre>.+\.) How many boxes does it have at the end\? Compute it with the bash tool "
-                     r"\(python3 -c\)\.")
+_M_SHIP = re.compile(rf"It ships (?P<s>{_Q}) boxes per day for (?P<d>{_Q}) days?")
+_M_RECV = re.compile(rf"It receives (?P<r>{_Q}) deliver(?:y|ies) of (?P<q>{_Q}) boxes each")
+_M_BODY = re.compile(r"(?P<pre>.+\.) How many boxes does it have at the end\?")
 
 
 def solve_math(text: str) -> DetResult:
-    if not text.endswith(SUFFIX):
-        return _nomatch("math: unknown suffix")
-    m = _M_BODY.fullmatch(text[: -len(SUFFIX)].strip())
+    core = _question_part(text)
+    m = _M_BODY.fullmatch(core) if core else None
     if not m:
         return _nomatch("math: body does not match")
     val: Optional[int] = None
     unknown = False
-    for s in re.split(r"\.\s+", m.group("pre").rstrip().rstrip(".")):
-        s = s.strip()
-        if val is None:
-            st = _M_START.fullmatch(s)
-            if not st:
-                return _nomatch("math: first sentence is not the start")
-            val = int(st.group(1))
-        elif (mm := _M_SPLIT.fullmatch(s)):
-            k = int(mm.group(1))
-            if k == 0:
-                return _nomatch("math: split by zero")
-            val //= k
-        elif _M_DOUBLE.fullmatch(s):
-            val *= 2
-        elif (mm := _M_SHIP.fullmatch(s)):
-            val -= int(mm.group(1)) * int(mm.group(2))
-        elif (mm := _M_RECV.fullmatch(s)):
-            val += int(mm.group(1)) * int(mm.group(2))
-        elif _M_SHIP_UNKNOWN.fullmatch(s):
-            unknown = True
-        else:
-            return _nomatch(f"math: unknown sentence {s[:40]!r}")
+    try:
+        for i, s in enumerate(re.split(r"\.\s+", m.group("pre").rstrip().rstrip("."))):
+            s = s.strip()
+            if i == 0:
+                st = _M_START.fullmatch(s)
+                if not st:
+                    return _nomatch("math: first sentence is not the start")
+                q = _qty(st.group("n"))
+                unknown, val = (True, 0) if q == "vague" else (unknown, q)
+            elif (mm := _M_SPLIT.fullmatch(s)):
+                k = _qty(mm.group("k"))
+                if k == "vague":
+                    unknown = True
+                elif k == 0:
+                    return _nomatch("math: split by zero")
+                elif not unknown:
+                    val //= k
+            elif _M_DOUBLE.fullmatch(s):
+                if not unknown:
+                    val *= 2
+            elif (mm := _M_SHIP.fullmatch(s)):
+                a, b = _qty(mm.group("s")), _qty(mm.group("d"))
+                if "vague" in (a, b):
+                    unknown = True
+                elif not unknown:
+                    val -= a * b
+            elif (mm := _M_RECV.fullmatch(s)):
+                a, b = _qty(mm.group("r")), _qty(mm.group("q"))
+                if "vague" in (a, b):
+                    unknown = True
+                elif not unknown:
+                    val += a * b
+            else:
+                return _nomatch(f"math: unknown sentence {s[:40]!r}")
+    except _NoMatch as e:
+        return _nomatch(f"math: {e}")
     if unknown:
-        return DetResult("unsolvable", why="math: an unknown quantity", solver="math")
+        return DetResult("unsolvable", why="math: an unspecified quantity", solver="math")
     return DetResult("answer", str(val), solver="math")
 
 
 # ------------------------------------------------------------------------------------------------ data analysis
-_D_BODY = re.compile(r"The file sales\.csv has columns (?P<cols>[a-z_,]+) \((?P<n>\d+) rows\)\. (?P<q>.+?) "
-                     r"Use bash with python3 to compute it\.")
+_D_BODY = re.compile(r"The file sales\.csv has columns (?P<cols>[a-z_,]+)(?: \((?P<n>\d+) rows\))?\. (?P<q>.+\?)")
 _D_UNITS = re.compile(r"How many units of product '(\w+)' were sold in months (\d+) through (\d+) inclusive\?")
 _D_UNITS_REGION = re.compile(r"How many units of product '(\w+)' were sold in region '(\w+)' in months (\d+) through "
                              r"(\d+) inclusive\?")
 _D_REVENUE = re.compile(r"What is the total revenue \(units \* price\) of product '(\w+)' in region '(\w+)'\?")
+# Concepts a sales table with these columns cannot answer. Deliberately a short list of unambiguous words: a question
+# that mentions one while the file has no such column cannot be solved exactly. ("cost" is left out: it may well
+# mean units * price.)
+_ABSENT_CONCEPTS = {"discount", "discounts", "tax", "taxes", "profit", "profits", "margin", "margins", "commission",
+                    "commissions", "shipping", "freight", "refund", "refunds", "rating", "ratings", "bonus", "tip",
+                    "tips", "fee", "fees", "customer", "customers", "salary", "salaries", "age", "email", "address"}
 
 
 def solve_data(text: str, workspace: Optional[str]) -> DetResult:
-    if workspace is None or not text.endswith(SUFFIX):
-        return _nomatch("data: no workspace or unknown suffix")
-    m = _D_BODY.fullmatch(text[: -len(SUFFIX)].strip())
+    core = _question_part(text) if workspace is not None else None
+    m = _D_BODY.fullmatch(core) if core else None
     if not m:
         return _nomatch("data: body does not match")
     cols = m.group("cols").split(",")
@@ -123,30 +224,40 @@ def solve_data(text: str, workspace: Optional[str]) -> DetResult:
             rows = list(reader)
     except (OSError, UnicodeDecodeError, csv.Error):
         return _nomatch("data: cannot read sales.csv")
-    if len(rows) != int(m.group("n")):
+    if m.group("n") is not None and len(rows) != int(m.group("n")):
         return _nomatch("data: row count differs from the instruction")
     q = m.group("q")
-    try:
-        if (mm := _D_UNITS.fullmatch(q)):
-            p, a, b = mm.group(1), int(mm.group(2)), int(mm.group(3))
-            total = sum(int(r["units"]) for r in rows if r["product"] == p and a <= int(r["month"]) <= b)
-        elif (mm := _D_UNITS_REGION.fullmatch(q)):
-            p, reg, a, b = mm.group(1), mm.group(2), int(mm.group(3)), int(mm.group(4))
-            total = sum(int(r["units"]) for r in rows
-                        if r["product"] == p and r["region"] == reg and a <= int(r["month"]) <= b)
-        elif (mm := _D_REVENUE.fullmatch(q)):
-            p, reg = mm.group(1), mm.group(2)
-            total = sum(int(r["units"]) * int(r["price"]) for r in rows if r["product"] == p and r["region"] == reg)
-        else:
-            return _nomatch("data: question is not a known template")
-    except (KeyError, ValueError, TypeError):
-        return _nomatch("data: a column is missing or not numeric")
-    return DetResult("answer", str(total), solver="data")
+
+    def total(needed, fn):
+        absent = [c for c in needed if c not in cols]
+        if absent:
+            return DetResult("unsolvable", why=f"data: column {absent[0]!r} is not in sales.csv", solver="data")
+        try:
+            return DetResult("answer", str(sum(fn(r) for r in rows)), solver="data")
+        except (KeyError, ValueError, TypeError):
+            return _nomatch("data: a column is not numeric")
+
+    if (mm := _D_UNITS.fullmatch(q)):
+        p, a, b = mm.group(1), int(mm.group(2)), int(mm.group(3))
+        return total(("units", "product", "month"),
+                     lambda r: int(r["units"]) if r["product"] == p and a <= int(r["month"]) <= b else 0)
+    if (mm := _D_UNITS_REGION.fullmatch(q)):
+        p, reg, a, b = mm.group(1), mm.group(2), int(mm.group(3)), int(mm.group(4))
+        return total(("units", "product", "region", "month"),
+                     lambda r: int(r["units"]) if r["product"] == p and r["region"] == reg and a <= int(r["month"]) <= b else 0)
+    if (mm := _D_REVENUE.fullmatch(q)):
+        p, reg = mm.group(1), mm.group(2)
+        return total(("units", "price", "product", "region"),
+                     lambda r: int(r["units"]) * int(r["price"]) if r["product"] == p and r["region"] == reg else 0)
+    words = set(re.findall(r"[a-z]+", re.sub(r"'[^']*'", " ", q.lower())))  # quoted values are data, not concepts
+    gone = sorted((words & _ABSENT_CONCEPTS) - set(cols))
+    if gone:
+        return DetResult("unsolvable", why=f"data: sales.csv has no {gone[0]!r} column", solver="data")
+    return _nomatch("data: question is not a known template")
 
 
 # ------------------------------------------------------------------------------------------------ search / kb
-_S_HEAD = "The directory kb/ contains a small knowledge base of markdown files. "
-_S_TAIL = " Use the file tools or bash (ls, grep, cat) to find it. " + SUFFIX
+_S_HEAD = re.compile(r"The directory kb/ [^.?]*knowledge base[^.?]*\. (?P<q>.+\?)")
 _NAME = r"[A-Z][\w'’-]*(?: [A-Z][\w'’-]*)+"
 # (question regex, kind). Every regex has exactly one group: the person's name.
 _S_TEMPLATES = [
@@ -157,6 +268,8 @@ _S_TEMPLATES = [
     (re.compile(rf"Who is the mentor of ({_NAME})\?"), "mentor"),
     (re.compile(rf"In which year was ({_NAME})'s employer founded\?"), "employer_founded"),
 ]
+_PERSON_KEYS = {"born", "employer", "mentor"}
+_COMPANY_KEYS = {"headquarters", "founded"}
 
 
 def _load_kb(kb_dir: str):
@@ -179,7 +292,7 @@ def _load_kb(kb_dir: str):
 
 
 class _Absent(Exception):
-    """The entity is provably not in the knowledge base."""
+    """The entity (or its needed field) is provably not in the knowledge base."""
 
 
 class _Unsure(Exception):
@@ -192,24 +305,41 @@ def _entity(ents, name: str, is_person: bool) -> Dict[str, str]:
     Absence is claimed only when no file OF THE SAME KIND mentions the name at all (a person file mentioning it as a
     mentor, or a company file mentioning it, makes us unsure and the task goes to the LLM). References from the other
     kind do not count: every person file names its employer, which says nothing about the company's data."""
-    def is_kind(fields):
-        return ("born" in fields or "employer" in fields) if is_person else ("headquarters" in fields)
+    def is_kind(fields):  # a record of the person / company schema is recognised by ANY of its known fields
+        return any(k in fields for k in (_PERSON_KEYS if is_person else _COMPANY_KEYS))
 
-    found = [e for e in ents.get(name.lower(), []) if is_kind(e[1])]
+    titled = ents.get(name.lower(), [])
+    found = [e for e in titled if is_kind(e[1])]
     if len(found) > 1:
         raise _Unsure(f"{name} is ambiguous")
     if found:
         return found[0][1]
+    if titled:  # a file with this very title exists but not in the schema we know: the answer may be in its text
+        raise _Unsure(f"{name} has a record in an unfamiliar format")
     same_kind_texts = [t for lst in ents.values() for _fn, f, t in lst if is_kind(f)]
-    if any(name.lower() in t.lower() for t in same_kind_texts):
+    if any(name.lower() in t.lower() for t in same_kind_texts) or _free_text_mentions(ents, name):
         raise _Unsure(f"{name} appears in the kb but not as a title")
-    raise _Absent(name)
+    raise _Absent(f"{name} is not in the kb")
+
+
+def _free_text_mentions(ents, name: str) -> bool:
+    """Is the name mentioned anywhere except as a title or in a `Mentor:` / `Employer:` reference line?"""
+    low = name.lower()
+    for lst in ents.values():
+        for _fn, _f, text in lst:
+            for line in text.splitlines():
+                if low in line.lower() and not line.startswith("# ") \
+                        and not re.match(r"\s*(mentor|employer)\s*:", line, re.I):
+                    return True
+    return False
 
 
 def solve_search(text: str, workspace: Optional[str]) -> DetResult:
-    if workspace is None or not text.startswith(_S_HEAD) or not text.endswith(_S_TAIL):
+    core = _question_part(text) if workspace is not None else None
+    hm = _S_HEAD.fullmatch(core) if core else None
+    if not hm:
         return _nomatch("search: unknown frame")
-    q = text[len(_S_HEAD): -len(_S_TAIL)].strip()
+    q = hm.group("q")
     for rx, kind in _S_TEMPLATES:
         mm = rx.fullmatch(q)
         if mm:
@@ -228,36 +358,47 @@ def solve_search(text: str, workspace: Optional[str]) -> DetResult:
         def company(n):
             return _entity(ents, n, False)
 
-        def need(fields, key):
-            if key not in fields or not fields[key]:
-                raise _Unsure(f"field {key} is missing")
-            return fields[key]
+        def need(fields, key, who, is_person):
+            if fields.get(key):
+                return fields[key]
+            known = _PERSON_KEYS if is_person else _COMPANY_KEYS
+            if any(k in fields for k in known if k != key):
+                # A record of this schema that simply lacks the field. If the name is mentioned in free text somewhere
+                # the information may live there: leave it to the LLM; otherwise it is not in the base.
+                if _free_text_mentions(ents, who):
+                    raise _Unsure(f"{who}: no {key!r} field, but mentioned in free text")
+                raise _Absent(f"{who} has no {key!r} recorded in the kb")
+            raise _Unsure(f"field {key} is missing")
 
         p = person(name)
         if kind == "born":
-            ans = need(p, "born")
+            ans = need(p, "born", name, True)
         elif kind == "employer_hq":
-            ans = need(company(need(p, "employer")), "headquarters")
+            emp = need(p, "employer", name, True)
+            ans = need(company(emp), "headquarters", emp, False)
         elif kind == "mentor":
-            ans = need(p, "mentor")
+            ans = need(p, "mentor", name, True)
         elif kind == "employer_founded":
-            ans = need(company(need(p, "employer")), "founded")
+            emp = need(p, "employer", name, True)
+            ans = need(company(emp), "founded", emp, False)
         else:
-            mentor = person(need(p, "mentor"))
+            mname = need(p, "mentor", name, True)
+            mentor = person(mname)
             if kind == "mentor_born":
-                ans = need(mentor, "born")
+                ans = need(mentor, "born", mname, True)
             else:  # mentor_employer_hq
-                ans = need(company(need(mentor, "employer")), "headquarters")
+                emp = need(mentor, "employer", mname, True)
+                ans = need(company(emp), "headquarters", emp, False)
     except _Absent as e:
-        return DetResult("unsolvable", why=f"search: {e} is not in the kb", solver="search")
+        return DetResult("unsolvable", why=f"search: {e}", solver="search")
     except _Unsure as e:
         return _nomatch(f"search: {e}")
     return DetResult("answer", ans.strip(), solver="search")
 
 
 # ------------------------------------------------------------------------------------------------ coding
-_C_TEXT = ("Run `python3 test_mylib.py` in the current directory; some tests fail. Fix the bugs in mylib.py (do not "
-           "edit the tests) until all tests pass. " + SUFFIX_DONE)
+_C_BODY = ("Run `python3 test_mylib.py` in the current directory; some tests fail. Fix the bugs in mylib.py (do not "
+           "edit the tests) until all tests pass.")
 
 # Canonical correct implementations of helper functions that appear in such tasks (and close siblings).
 CANON: Dict[str, str] = {
@@ -294,11 +435,14 @@ def _write(path: str, src: str) -> None:
 
 
 def solve_coding(text: str, workspace: Optional[str]) -> DetResult:
-    if workspace is None or text != _C_TEXT:
+    if workspace is None or _before_tail(text, "word DONE") != _C_BODY:
         return _nomatch("coding: instruction is not the known template")
     lib, tests = os.path.join(workspace, "mylib.py"), os.path.join(workspace, "test_mylib.py")
     if not (os.path.isfile(lib) and os.path.isfile(tests)):
         return _nomatch("coding: mylib.py / test_mylib.py missing")
+    flags = tests_flags(workspace)
+    if flags:
+        return DetResult("unsolvable", why=f"coding: {flags[0]}", solver="coding")
     with open(lib, encoding="utf-8") as f:
         orig = f.read()
     ok0, fail0 = _run_tests(workspace)

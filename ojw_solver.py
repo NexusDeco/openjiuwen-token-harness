@@ -82,11 +82,12 @@ class LedgerModel(Model):
     failures. One instance per attempt, so `task_id` is fixed."""
 
     def __init__(self, client_cfg: ModelClientConfig, req_cfg: ModelRequestConfig, *, ledger: Ledger, task_id: str,
-                 api_key: str, call_max_tokens: int, cwd: str, auto_stop: bool = True, max_attempts: int = 5):
+                 api_key: str, call_max_tokens: int, cwd: str, task_dir: Optional[str] = None, auto_stop: bool = True,
+                 max_attempts: int = 5):
         super().__init__(client_cfg, req_cfg)
         self._lg_ledger, self._lg_task, self._lg_key = ledger, task_id, api_key
         self._lg_call_max, self._lg_attempts = call_max_tokens, max_attempts
-        self._lg_cwd, self._lg_auto_stop = cwd, auto_stop
+        self._lg_cwd, self._lg_task_dir, self._lg_auto_stop = cwd, task_dir, auto_stop
         self._lg_name = req_cfg.model_name
         self.calls = 0
         self.auto_stopped = False
@@ -99,7 +100,8 @@ class LedgerModel(Model):
             # A command has just finished and the answer is on disk: skip the model call whose only job would be
             # to write DONE (see solver.answer_ready). Run in a thread: it may execute the task's tests.
             tool_text = _last_tool_text(messages)
-            if tool_text is not None and await asyncio.to_thread(answer_ready, self._lg_cwd, tool_text):
+            if tool_text is not None and await asyncio.to_thread(
+                    answer_ready, self._lg_cwd, tool_text, self._lg_task_dir):
                 reply = AssistantMessage(content="DONE")
                 self.last_messages, self.last_reply, self.auto_stopped = messages, reply, True
                 return reply
@@ -208,7 +210,7 @@ class OjwSolver(BaseSolver):
             ModelClientConfig(client_provider="OpenAI", api_key=self._key, api_base=self._base, timeout=120.0),
             ModelRequestConfig(model_name=model),
             ledger=self.ledger, task_id=task.id, api_key=self._key, call_max_tokens=self.call_max_tokens,
-            cwd=cwd, auto_stop=self.auto_stop)
+            cwd=cwd, task_dir=task.dir, auto_stop=self.auto_stop)
         # Unique ids: the framework keeps tools and sessions in process-wide registries keyed by these ids.
         aid = f"{task.id}-{uuid.uuid4().hex[:8]}"
         agent = ReActAgent(AgentCard(id=aid, name="solver", description="Solves one task with bash."))

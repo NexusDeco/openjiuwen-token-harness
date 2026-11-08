@@ -6,6 +6,7 @@ Prints `PORT <n>` once it listens on 127.0.0.1, then serves until killed. Point 
     LLM_BASE_URL=http://127.0.0.1:<n>/v1 LLM_API_KEY=mock python run_agent.py --tasks-dir ...
 
 * mode `answer`     : first call of a conversation -> tool call `echo 0 > answer.txt`; after a tool result -> `DONE`
+* mode `answer-parent`: like `answer` but writes ../answer.txt (the answer file next to task.json)
 * mode `impossible` : always replies `IMPOSSIBLE`
 * --fail-first K    : the first K requests fail with --fail-status (429 carries `Retry-After: 1`), then it works;
                       used to check retries and that failed requests are not charged
@@ -18,7 +19,7 @@ import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ap = argparse.ArgumentParser()
-ap.add_argument("--mode", choices=["answer", "impossible"], default="answer")
+ap.add_argument("--mode", choices=["answer", "answer-parent", "impossible"], default="answer")
 ap.add_argument("--port", type=int, default=0)
 ap.add_argument("--fail-first", type=int, default=0)
 ap.add_argument("--fail-status", type=int, default=429)
@@ -59,7 +60,7 @@ class Handler(BaseHTTPRequestHandler):
             msg, fin = {"role": "assistant", "content": "IMPOSSIBLE"}, "stop"
         elif body.get("tools") and not any(m.get("role") == "tool" for m in msgs):
             msg = {"role": "assistant", "content": "", "tool_calls": [{"id": "call_1", "type": "function", "function": {
-                "name": "bash", "arguments": json.dumps({"command": "echo 0 > answer.txt"})}}]}
+                "name": "bash", "arguments": json.dumps({"command": "echo 0 > " + ("../answer.txt" if ARGS.mode == "answer-parent" else "answer.txt")})}}]}
             fin = "tool_calls"
         else:
             msg, fin = {"role": "assistant", "content": "DONE"}, "stop"

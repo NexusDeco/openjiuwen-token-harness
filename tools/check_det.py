@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Validate det_solver.py without spending a single token.
 
-    python tools/check_det.py [--seeds 20] [--samples <dir with the organisers' sample tasks>]
+    python tools/check_det.py [--seeds 20] [--extended] [--samples <dir with the organisers' sample tasks>]
 
 Ground truth comes from tools/gen_tasks.py (`--seeds` different seeds, 40 tasks each) and, optionally, from the
 organisers' sample tasks (their task.json still carries `expected`). Reported per task kind: correct answers, WRONG
@@ -24,17 +24,19 @@ from det_solver import _run_tests, solve_deterministic  # noqa: E402
 from tasks import load_tasks  # noqa: E402
 
 
-def check_generated(seeds, tally, problems):
+def check_generated(seeds, tally, problems, extended=False):
     for seed in range(seeds):
         with tempfile.TemporaryDirectory() as td:
             out, gp = os.path.join(td, "tasks"), os.path.join(td, "grader.json")
             subprocess.run([sys.executable, os.path.join(HERE, "gen_tasks.py"), "--out", out, "--grader", gp,
-                            "--seed", str(1000 + seed)], check=True, capture_output=True)
+                            "--seed", str(1000 + seed)] + (["--extended"] if extended else []),
+                           check=True, capture_output=True)
             grader = json.load(open(gp))
             for t in load_tasks(out):
                 g = grader[t.id]
                 r = solve_deterministic(t)
-                key = (t.type, g["kind"], "solvable" if g["solvable"] else "unsolvable")
+                kind = g["kind"] + ("*boiler" if g["variant"] == "boilerplate" else "")
+                key = (t.type, kind, "solvable" if g["solvable"] else "unsolvable")
                 if g["solvable"]:
                     if r.status == "nomatch":
                         verdict = "fallback"
@@ -79,12 +81,13 @@ def check_samples(path, problems):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--seeds", type=int, default=20)
+    ap.add_argument("--extended", action="store_true", help="also generate the EXTRA kinds (66 tasks per seed)")
     ap.add_argument("--samples")
     a = ap.parse_args()
     tally = collections.defaultdict(collections.Counter)
     problems = []
-    check_generated(a.seeds, tally, problems)
-    print(f"== generated tasks: {a.seeds} seeds x 40")
+    check_generated(a.seeds, tally, problems, a.extended)
+    print(f"== generated tasks: {a.seeds} seeds x {66 if a.extended else 40}")
     print(f"{'type':14s} {'kind':22s} {'truth':10s} {'n':>5s}  results")
     for (t, k, truth), c in sorted(tally.items()):
         print(f"{t:14s} {k:22s} {truth:10s} {sum(c.values()):5d}  {dict(c)}")
