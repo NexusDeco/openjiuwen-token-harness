@@ -200,10 +200,13 @@ def solve_math(text: str) -> DetResult:
 
 # ------------------------------------------------------------------------------------------------ data analysis
 _D_BODY = re.compile(r"The file sales\.csv has columns (?P<cols>[a-z_,]+)(?: \((?P<n>\d+) rows\))?\. (?P<q>.+\?)")
-_D_UNITS = re.compile(r"How many units of product '(\w+)' were sold in months (\d+) through (\d+) inclusive\?")
-_D_UNITS_REGION = re.compile(r"How many units of product '(\w+)' were sold in region '(\w+)' in months (\d+) through "
-                             r"(\d+) inclusive\?")
-_D_REVENUE = re.compile(r"What is the total revenue \(units \* price\) of product '(\w+)' in region '(\w+)'\?")
+# Two metrics (units sold; revenue = units * price, defined in the question itself) over optional filters, always written
+# in this order: product, region, months ("in months A through B inclusive" or "in month M"). The three forms seen or
+# guessed so far (product+months, product+region+months, revenue of product in region) are special cases.
+_D_FILT = (r"(?: in region '(?P<reg>\w+)')?"
+           r"(?: in (?:months (?P<a>\d+) through (?P<b>\d+) inclusive|month (?P<m>\d+)))?")
+_D_UNITS_Q = re.compile(r"How many units(?: of product '(?P<p>\w+)')? were sold" + _D_FILT + r"\?")
+_D_REVENUE_Q = re.compile(r"What is the total revenue \(units \* price\)(?: of product '(?P<p>\w+)')?" + _D_FILT + r"\?")
 # Concepts a sales table with these columns cannot answer. Deliberately a short list of unambiguous words: a question
 # that mentions one while the file has no such column cannot be solved exactly. ("cost" is left out: it may well
 # mean units * price.)
@@ -239,18 +242,20 @@ def solve_data(text: str, workspace: Optional[str]) -> DetResult:
         except (KeyError, ValueError, TypeError):
             return _nomatch("data: a column is not numeric")
 
-    if (mm := _D_UNITS.fullmatch(q)):
-        p, a, b = mm.group(1), int(mm.group(2)), int(mm.group(3))
-        return total(("units", "product", "month"),
-                     lambda r: int(r["units"]) if r["product"] == p and a <= int(r["month"]) <= b else 0)
-    if (mm := _D_UNITS_REGION.fullmatch(q)):
-        p, reg, a, b = mm.group(1), mm.group(2), int(mm.group(3)), int(mm.group(4))
-        return total(("units", "product", "region", "month"),
-                     lambda r: int(r["units"]) if r["product"] == p and r["region"] == reg and a <= int(r["month"]) <= b else 0)
-    if (mm := _D_REVENUE.fullmatch(q)):
-        p, reg = mm.group(1), mm.group(2)
-        return total(("units", "price", "product", "region"),
-                     lambda r: int(r["units"]) * int(r["price"]) if r["product"] == p and r["region"] == reg else 0)
+    for rx, revenue in ((_D_UNITS_Q, False), (_D_REVENUE_Q, True)):
+        mm = rx.fullmatch(q)
+        if mm:
+            p, reg, a, b, mo = (mm.group(k) for k in ("p", "reg", "a", "b", "m"))
+            lo, hi = (int(a), int(b)) if a is not None else ((int(mo), int(mo)) if mo is not None else (None, None))
+            needed = ["units"] + (["price"] if revenue else []) + (["product"] if p else []) \
+                + (["region"] if reg else []) + (["month"] if lo is not None else [])
+
+            def value(r, p=p, reg=reg, lo=lo, hi=hi, revenue=revenue):
+                if (p and r["product"] != p) or (reg and r["region"] != reg) \
+                        or (lo is not None and not lo <= int(r["month"]) <= hi):
+                    return 0
+                return int(r["units"]) * (int(r["price"]) if revenue else 1)
+            return total(needed, value)
     words = set(re.findall(r"[a-z]+", re.sub(r"'[^']*'", " ", q.lower())))  # quoted values are data, not concepts
     gone = sorted((words & _ABSENT_CONCEPTS) - set(cols))
     if gone:
@@ -261,14 +266,39 @@ def solve_data(text: str, workspace: Optional[str]) -> DetResult:
 # ------------------------------------------------------------------------------------------------ search / kb
 _S_HEAD = re.compile(r"The directory kb/ [^.?]*knowledge base[^.?]*\. (?P<q>.+\?)")
 _NAME = r"[A-Z][\w'’-]*(?: [A-Z][\w'’-]*)+"
-# (question regex, kind). Every regex has exactly one group: the person's name.
-_S_TEMPLATES = [
-    (re.compile(rf"In which year was ({_NAME}) born\?"), "born"),
-    (re.compile(rf"In which city is the headquarters of ({_NAME})'s employer\?"), "employer_hq"),
-    (re.compile(rf"In which year was ({_NAME})'s mentor born\?"), "mentor_born"),
-    (re.compile(rf"In which city is the headquarters of the employer of ({_NAME})'s mentor\?"), "mentor_employer_hq"),
-    (re.compile(rf"Who is the mentor of ({_NAME})\?"), "mentor"),
-    (re.compile(rf"In which year was ({_NAME})'s employer founded\?"), "employer_founded"),
+# The kb is a graph: person --mentor--> person, person --employer--> company. A question names a start person, follows
+# `hops` mentor links (written either "X's mentor" or "the mentor of X", any depth, mixed freely) and asks for one fact.
+_POSS = r"['\u2019]s"
+_MAX_HOPS = 12
+
+
+def _person_expr(s: str):
+    """'Anna Lee' -> ('Anna Lee', 0); "Anna Lee's mentor's mentor" / 'the mentor of Anna Lee' -> hops counted; else None."""
+    s, hops = s.strip(), 0
+    while True:
+        m = re.fullmatch(r"the mentor of (.+)", s) or re.fullmatch(rf"(.+){_POSS} mentor", s)
+        if not m:
+            break
+        s, hops = m.group(1).strip(), hops + 1
+        if hops > _MAX_HOPS:
+            return None
+    return (s, hops) if re.fullmatch(_NAME, s) else None
+
+
+def _company_expr(s: str):
+    """The employer of a person expression: "X's employer" / 'the employer of X' -> that person's (name, hops)."""
+    s = s.strip()
+    m = re.fullmatch(r"the employer of (.+)", s) or re.fullmatch(rf"(.+){_POSS} employer", s)
+    return _person_expr(m.group(1)) if m else None
+
+
+# (kind, question frame with one group, parser of that group)
+_S_FRAMES = [
+    ("born", re.compile(r"In which year was (.+) born\?"), _person_expr),
+    ("hq", re.compile(r"In which city is the headquarters of (.+)\?"), _company_expr),
+    ("founded", re.compile(r"In which year was (.+) founded\?"), _company_expr),
+    ("mentor", re.compile(r"Who is the mentor of (.+)\?"), _person_expr),
+    ("mentor", re.compile(rf"Who is (.+){_POSS} mentor\?"), _person_expr),
 ]
 _PERSON_KEYS = {"born", "employer", "mentor"}
 _COMPANY_KEYS = {"headquarters", "founded"}
@@ -342,10 +372,11 @@ def solve_search(text: str, workspace: Optional[str]) -> DetResult:
     if not hm:
         return _nomatch("search: unknown frame")
     q = hm.group("q")
-    for rx, kind in _S_TEMPLATES:
+    for kind, rx, parse in _S_FRAMES:
         mm = rx.fullmatch(q)
-        if mm:
-            name = mm.group(1)
+        expr = parse(mm.group(1)) if mm else None
+        if expr:
+            name, hops = expr
             break
     else:
         return _nomatch("search: question is not a known template")
@@ -372,25 +403,17 @@ def solve_search(text: str, workspace: Optional[str]) -> DetResult:
                 raise _Absent(f"{who} has no {key!r} recorded in the kb")
             raise _Unsure(f"field {key} is missing")
 
-        p = person(name)
+        p, cur = person(name), name
+        for _ in range(hops):  # follow the mentor links
+            cur = need(p, "mentor", cur, True)
+            p = person(cur)
         if kind == "born":
-            ans = need(p, "born", name, True)
-        elif kind == "employer_hq":
-            emp = need(p, "employer", name, True)
-            ans = need(company(emp), "headquarters", emp, False)
+            ans = need(p, "born", cur, True)
         elif kind == "mentor":
-            ans = need(p, "mentor", name, True)
-        elif kind == "employer_founded":
-            emp = need(p, "employer", name, True)
-            ans = need(company(emp), "founded", emp, False)
-        else:
-            mname = need(p, "mentor", name, True)
-            mentor = person(mname)
-            if kind == "mentor_born":
-                ans = need(mentor, "born", mname, True)
-            else:  # mentor_employer_hq
-                emp = need(mentor, "employer", mname, True)
-                ans = need(company(emp), "headquarters", emp, False)
+            ans = need(p, "mentor", cur, True)
+        else:  # hq / founded: through the person's employer
+            emp = need(p, "employer", cur, True)
+            ans = need(company(emp), "headquarters" if kind == "hq" else "founded", emp, False)
     except _Absent as e:
         return DetResult("unsolvable", why=f"search: {e}", solver="search")
     except _Unsure as e:
