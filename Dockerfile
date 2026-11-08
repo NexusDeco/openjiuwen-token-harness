@@ -5,6 +5,8 @@
 #   `uv pip compile --python-version 3.12 --python-platform x86_64-unknown-linux-gnu`, 159 packages).
 # * --only-binary=:all: -> pip never compiles anything (slim image has no compiler, builds stay fast);
 #   `uv pip compile --no-build` confirmed that every pinned package ships a wheel for CPython 3.12 / linux x86_64.
+# * pip retries 10 times with a 100 s socket timeout (defaults: 5 and 15 s): one transient CDN/network error must not
+#   fail a build that has a hard 1000 s limit.
 # * Everything is downloaded HERE, at build time. Nothing is fetched at run time (the container only reaches the
 #   LLM proxy). No API keys are baked in: LLM_BASE_URL / LLM_API_KEY come from the environment of `docker run`.
 FROM python:3.12.16-slim-bookworm
@@ -14,7 +16,9 @@ FROM python:3.12.16-slim-bookworm
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_RETRIES=10 \
+    PIP_DEFAULT_TIMEOUT=100
 
 WORKDIR /app
 
