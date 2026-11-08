@@ -36,6 +36,7 @@ from typing import Any, Dict, List, Optional
 
 from openjiuwen.core.foundation.llm import Model
 from openjiuwen.core.foundation.llm.schema.config import ModelClientConfig, ModelRequestConfig
+from openjiuwen.core.foundation.llm.schema.message import AssistantMessage
 from openjiuwen.core.foundation.tool import ToolCard
 from openjiuwen.core.foundation.tool.function.function import LocalFunction
 from openjiuwen.core.single_agent.agents.react_agent import ReActAgent, ReActAgentConfig
@@ -43,7 +44,7 @@ from openjiuwen.core.single_agent.schema.agent_card import AgentCard
 
 from budget import Ledger
 from llm import LLMError, estimate_tokens
-from solver import BASH_TOOL, MIN_ATTEMPT_BUDGET, SYSTEM, BaseSolver, run_bash
+from solver import BASH_TOOL, MIN_ATTEMPT_BUDGET, SYSTEM, BaseSolver, answer_ready, run_bash
 from tasks import Task
 
 RETRYABLE = {"RateLimitError", "InternalServerError", "APITimeoutError", "APIConnectionError"}
@@ -53,6 +54,18 @@ AUTH_ERRORS = {"AuthenticationError", "PermissionDeniedError"}
 
 class OutOfBudget(Exception):
     pass
+
+
+def _last_tool_text(messages) -> Optional[str]:
+    """Text of the newest message if it is a tool result (i.e. a command has just finished), else None."""
+    if not messages:
+        return None
+    m = messages[-1]
+    role = m.get("role") if isinstance(m, dict) else getattr(m, "role", None)
+    if role != "tool":
+        return None
+    c = m.get("content") if isinstance(m, dict) else getattr(m, "content", "")
+    return c if isinstance(c, str) else str(c)
 
 
 def _plain(m: Any) -> Dict[str, Any]:
@@ -69,17 +82,27 @@ class LedgerModel(Model):
     failures. One instance per attempt, so `task_id` is fixed."""
 
     def __init__(self, client_cfg: ModelClientConfig, req_cfg: ModelRequestConfig, *, ledger: Ledger, task_id: str,
-                 api_key: str, call_max_tokens: int, max_attempts: int = 5):
+                 api_key: str, call_max_tokens: int, cwd: str, auto_stop: bool = True, max_attempts: int = 5):
         super().__init__(client_cfg, req_cfg)
         self._lg_ledger, self._lg_task, self._lg_key = ledger, task_id, api_key
         self._lg_call_max, self._lg_attempts = call_max_tokens, max_attempts
+        self._lg_cwd, self._lg_auto_stop = cwd, auto_stop
         self._lg_name = req_cfg.model_name
         self.calls = 0
+        self.auto_stopped = False
         self.out_of_budget = False
         self.last_messages: Optional[List[Any]] = None
         self.last_reply: Any = None
 
     async def invoke(self, messages, *, tools=None, **kwargs):  # type: ignore[override]
+        if self._lg_auto_stop:
+            # A command has just finished and the answer is on disk: skip the model call whose only job would be
+            # to write DONE (see solver.answer_ready). Run in a thread: it may execute the task's tests.
+            tool_text = _last_tool_text(messages)
+            if tool_text is not None and await asyncio.to_thread(answer_ready, self._lg_cwd, tool_text):
+                reply = AssistantMessage(content="DONE")
+                self.last_messages, self.last_reply, self.auto_stopped = messages, reply, True
+                return reply
         last = "no attempt made"
         for attempt in range(self._lg_attempts):
             room = self._lg_ledger.headroom(self._lg_task)
@@ -184,7 +207,8 @@ class OjwSolver(BaseSolver):
         llm = LedgerModel(
             ModelClientConfig(client_provider="OpenAI", api_key=self._key, api_base=self._base, timeout=120.0),
             ModelRequestConfig(model_name=model),
-            ledger=self.ledger, task_id=task.id, api_key=self._key, call_max_tokens=self.call_max_tokens)
+            ledger=self.ledger, task_id=task.id, api_key=self._key, call_max_tokens=self.call_max_tokens,
+            cwd=cwd, auto_stop=self.auto_stop)
         # Unique ids: the framework keeps tools and sessions in process-wide registries keyed by these ids.
         aid = f"{task.id}-{uuid.uuid4().hex[:8]}"
         agent = ReActAgent(AgentCard(id=aid, name="solver", description="Solves one task with bash."))

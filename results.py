@@ -38,7 +38,10 @@ class ResultStore:
             pass
         return dict(self.answers)
 
-    def record(self, task: Task, answer: str) -> None:
+    def record(self, task: Task, answer: str) -> bool:
+        """Save the answer. Returns True only if answer.txt really landed next to task.json (the file the organisers
+        read); a failure is logged and must not be reported as a solved task."""
+        written = True
         with self._lock:
             self.answers[task.id] = answer
             for d in {task.dir, task.workspace}:
@@ -47,8 +50,25 @@ class ResultStore:
                         with open(os.path.join(d, "answer.txt"), "w", encoding="utf-8") as f:
                             f.write(answer.strip() + "\n")
                     except OSError as e:
+                        if d == task.dir:
+                            written = False
                         print(f"[results] cannot write answer.txt in {d}: {e}", file=sys.stderr)
             self._flush(self.out_path, self.answers)
+        return written
+
+    def clear(self, task: Task) -> None:
+        """No answer for this task: make sure no answer.txt is left behind (the model may have written a
+        placeholder before giving up). The organisers asked us not to create the file for unsolvable tasks."""
+        with self._lock:
+            self.answers.pop(task.id, None)
+            for d in {task.dir, task.workspace}:
+                if d:
+                    try:
+                        os.remove(os.path.join(d, "answer.txt"))
+                    except FileNotFoundError:
+                        pass
+                    except OSError as e:
+                        print(f"[results] cannot remove answer.txt in {d}: {e}", file=sys.stderr)
 
     def note(self, task_id: str, **info: Any) -> None:
         with self._lock:

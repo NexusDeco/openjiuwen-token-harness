@@ -1,0 +1,81 @@
+{
+ "total_spent": 0.0,
+ "llm_calls": 0,
+ "elapsed_s": 1.7,
+ "answered": 8,
+ "budget": 12000.0,
+ "tasks": {
+  "coding_0003": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "coding_0007": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic coding"
+  },
+  "data_analysis_0002": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "data_analysis_0006": {
+   "status": "answered",
+   "reward": 3.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic data"
+  },
+  "math_0000": {
+   "status": "answered",
+   "reward": 5.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "math_0004": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic math"
+  },
+  "search_0001": {
+   "status": "answered",
+   "reward": 1.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  },
+  "search_0005": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 0.0,
+   "model": "deterministic",
+   "steps": 0,
+   "reason": "deterministic search"
+  }
+ }
+}

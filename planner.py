@@ -13,14 +13,15 @@ from prechecks import precheck
 from tasks import Task, missing_files
 
 # task_type -> (p_success, expected cost in output-token equivalents)
-# Cost = mean measured per type with qwen3.6-35b-a3b-noreason (8 organiser samples, then 32 synthetic solvable tasks
-# in the same formats, openjiuwen engine): math 353 (n=8), data_analysis 309 (n=6), search 458 (n=6; 3-hop probes
-# 622), coding 1033 (n=8).   p_success: 28/28 solved in the sample formats, so these stay deliberately cautious.
+# Cost = mean measured per type with qwen3.6-35b-a3b-noreason, openjiuwen engine, WITH auto-stop (solver.answer_ready),
+# on 32 synthetic solvable tasks in the sample formats: math 270 (n=8), data_analysis 157 (n=8), search 363 (n=6; 3-hop
+# probes 501, overall 398), coding 889 (n=8). Without auto-stop they were 353 / 309 / 458 / 1033.
+# p_success: 32/32 solved on the synthetic set and 8/8 on the organiser samples, so these stay deliberately cautious.
 PRIORS: Dict[str, Tuple[float, float]] = {
-    "math": (0.90, 350.0),
-    "search": (0.90, 460.0),
-    "data_analysis": (0.85, 310.0),
-    "coding": (0.80, 1050.0),
+    "math": (0.90, 270.0),
+    "search": (0.90, 400.0),
+    "data_analysis": (0.85, 160.0),
+    "coding": (0.80, 890.0),
 }
 DEFAULT_PRIOR = (0.50, 1500.0)
 MIN_P = 0.15  # below this a task is not attempted at all

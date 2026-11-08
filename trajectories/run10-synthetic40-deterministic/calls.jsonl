@@ -1,0 +1,16 @@
+{"ts": 1794121110.262, "task": "data_analysis_0124", "model": "qwen3.6-35b-a3b-noreason", "prompt": 447, "completion": 30, "cost": 74.7, "note": ""}
+{"ts": 1794121111.683, "task": "coding_0128", "model": "qwen3.6-35b-a3b-noreason", "prompt": 438, "completion": 31, "cost": 74.8, "note": ""}
+{"ts": 1794121112.322, "task": "data_analysis_0139", "model": "qwen3.6-35b-a3b-noreason", "prompt": 446, "completion": 107, "cost": 151.6, "note": ""}
+{"ts": 1794121112.385, "task": "coding_0128", "model": "qwen3.6-35b-a3b-noreason", "prompt": 681, "completion": 29, "cost": 97.1, "note": ""}
+{"ts": 1794121113.11, "task": "coding_0128", "model": "qwen3.6-35b-a3b-noreason", "prompt": 861, "completion": 30, "cost": 116.1, "note": ""}
+{"ts": 1794121113.195, "task": "data_analysis_0139", "model": "qwen3.6-35b-a3b-noreason", "prompt": 576, "completion": 36, "cost": 93.6, "note": ""}
+{"ts": 1794121113.278, "task": "data_analysis_0124", "model": "qwen3.6-35b-a3b-noreason", "prompt": 564, "completion": 194, "cost": 250.4, "note": ""}
+{"ts": 1794121115.049, "task": "data_analysis_0124", "model": "qwen3.6-35b-a3b-noreason", "prompt": 778, "completion": 114, "cost": 191.8, "note": ""}
+{"ts": 1794121118.796, "task": "coding_0128", "model": "qwen3.6-35b-a3b-noreason", "prompt": 1156, "completion": 446, "cost": 561.6, "note": ""}
+{"ts": 1794121118.901, "task": "data_analysis_0124", "model": "qwen3.6-35b-a3b-noreason", "prompt": 981, "completion": 329, "cost": 427.1, "note": ""}
+{"ts": 1794121120.502, "task": "coding_0128", "model": "qwen3.8-27b-noreason", "prompt": 438, "completion": 42, "cost": 85.8, "note": ""}
+{"ts": 1794121121.472, "task": "data_analysis_0124", "model": "qwen3.6-35b-a3b-noreason", "prompt": 1841, "completion": 222, "cost": 406.1, "note": ""}
+{"ts": 1794121121.978, "task": "coding_0128", "model": "qwen3.8-27b-noreason", "prompt": 695, "completion": 56, "cost": 125.5, "note": ""}
+{"ts": 1794121123.675, "task": "coding_0128", "model": "qwen3.8-27b-noreason", "prompt": 975, "completion": 38, "cost": 135.5, "note": ""}
+{"ts": 1794121124.933, "task": "coding_0128", "model": "qwen3.8-27b-noreason", "prompt": 1415, "completion": 34, "cost": 175.5, "note": ""}
+{"ts": 1794121128.728, "task": "coding_0128", "model": "qwen3.8-27b-noreason", "prompt": 1467, "completion": 156, "cost": 302.7, "note": ""}

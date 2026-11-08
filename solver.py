@@ -126,6 +126,22 @@ def normalize_answer(a: Optional[str]) -> Optional[str]:
     return m.group(1) if m else s
 
 
+def answer_ready(cwd: str, last_tool_output: str = "") -> bool:
+    """True when the attempt can end WITHOUT another model call whose only job is to say DONE.
+
+    Every task used to finish with a separate call (the whole history is sent again) in which the model just writes
+    DONE, and data tasks added a verifying `cat answer.txt`. Ready means: a non-empty answer.txt exists (a stale one
+    is deleted at the start of every attempt), the last command did not fail or time out, and the local tests, if the
+    workspace has any, pass. If a test fails the conversation simply continues, so correctness does not change.
+    """
+    if _read_answer(cwd) is None:
+        return False
+    tail = (last_tool_output or "")[-80:]
+    if re.search(r"\[exit \d+\]\s*$", tail) or "[timeout after" in tail:
+        return False
+    return verify(cwd) is not False
+
+
 class BaseSolver:
     """Policy shared by every engine (IMPOSSIBLE, escalation only on a failed local test, step caps, budget).
 
@@ -135,8 +151,9 @@ class BaseSolver:
 
     def __init__(self, ledger: Ledger, tiers: Optional[List[str]] = None, max_steps: int = 8,
                  call_max_tokens: int = 1024, bash_timeout: float = 30.0, log_dir: Optional[str] = None,
-                 step_caps: Optional[Dict[str, int]] = None):
+                 step_caps: Optional[Dict[str, int]] = None, auto_stop: bool = True):
         self.ledger = ledger
+        self.auto_stop = auto_stop  # end an attempt as soon as answer_ready() is true (see there)
         self.tiers = tiers or list(DEFAULT_TIERS)
         self.max_steps, self.call_max_tokens, self.bash_timeout = max_steps, call_max_tokens, bash_timeout
         self.step_caps = STEP_CAPS if step_caps is None else step_caps
@@ -218,6 +235,7 @@ class ToolLoopSolver(BaseSolver):
             final_text = msg.get("content") or ""
             if not calls:
                 return step, "finished", final_text
+            out = ""
             for c in calls:
                 try:
                     args = json.loads(c["function"]["arguments"] or "{}")
@@ -225,4 +243,7 @@ class ToolLoopSolver(BaseSolver):
                 except (KeyError, TypeError, ValueError):
                     out = "error: tool arguments must be JSON like {\"command\": \"...\"}"
                 messages.append({"role": "tool", "tool_call_id": c.get("id", ""), "content": out})
+            if self.auto_stop and answer_ready(cwd, out):
+                messages.append({"role": "assistant", "content": "DONE"})  # not a model call: nothing is charged
+                return step, "finished", "DONE"
         return cap, "max-steps", final_text
