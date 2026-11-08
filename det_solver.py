@@ -143,11 +143,28 @@ def _qty(s: str) -> Union[int, str]:
 
 _Q = r"[A-Za-z0-9][A-Za-z0-9 -]*?"
 _M_START = re.compile(rf"A warehouse starts with (?P<n>{_Q}) boxes")
-_M_SPLIT = re.compile(rf"Then the stock is split equally into (?P<k>{_Q}) warehouses and it keeps one share \(rounded down\)")
-_M_DOUBLE = re.compile(r"Then the stock is doubled by merging with a sister warehouse")
-_M_SHIP = re.compile(rf"It ships (?P<s>{_Q}) boxes per day for (?P<d>{_Q}) days?")
-_M_RECV = re.compile(rf"It receives (?P<r>{_Q}) deliver(?:y|ies) of (?P<q>{_Q}) boxes each")
 _M_BODY = re.compile(r"(?P<pre>.+\.) How many boxes does it have at the end\?")
+# The story is a sequence of operations on one stock, any order and length. A sentence is matched in canonical form: a
+# leading "Then " is dropped and the first letter lower-cased, so "Then it ships ..." and "It ships ..." are one form.
+_M_SPLIT = re.compile(rf"the stock is split equally into (?P<k>{_Q}) warehouses and it keeps one share "
+                      r"\(rounded (?P<mode>down|up)\)")
+_M_MULT = re.compile(r"the stock is (?P<w>doubled|tripled|quadrupled)"
+                     r"(?: by merging with (?P<c>a|one|two|three) sister warehouses?)?")
+_M_SHIP = re.compile(rf"it ships (?P<a>{_Q}) boxes(?: per day for (?P<b>{_Q}) days?)?")
+_M_RECV = re.compile(rf"it receives (?P<a>{_Q}) boxes(?: per day for (?P<b>{_Q}) days?)?")
+_M_DELIV = re.compile(rf"it receives (?P<a>{_Q}) deliver(?:y|ies) of (?P<b>{_Q}) boxes each")
+_MULT = {"doubled": 2, "tripled": 3, "quadrupled": 4}
+_MULT_TAIL = {"a": 1, "one": 1, "two": 2, "three": 3}
+# A known sentence with an EMPTY quantity slot ("It ships boxes per day for 3 days"). A solvable task cannot contain one,
+# so it is unsolvable, with no guessing.
+_M_HOLES = [
+    re.compile(rf"it (?:ships|receives) boxes(?: per day for (?:{_Q}) days?)?"),
+    re.compile(rf"it (?:ships|receives) (?:{_Q}) boxes per day for days?"),
+    re.compile(rf"it receives deliver(?:y|ies) of (?:{_Q}) boxes each"),
+    re.compile(rf"it receives (?:{_Q}) deliver(?:y|ies) of boxes each"),
+    re.compile(r"the stock is split equally into warehouses and it keeps one share \(rounded (?:down|up)\)"),
+]
+_M_START_HOLE = re.compile(r"A warehouse starts with boxes")
 
 
 def solve_math(text: str) -> DetResult:
@@ -161,34 +178,40 @@ def solve_math(text: str) -> DetResult:
         for i, s in enumerate(re.split(r"\.\s+", m.group("pre").rstrip().rstrip("."))):
             s = s.strip()
             if i == 0:
+                if _M_START_HOLE.fullmatch(s):
+                    unknown, val = True, 0
+                    continue
                 st = _M_START.fullmatch(s)
                 if not st:
                     return _nomatch("math: first sentence is not the start")
                 q = _qty(st.group("n"))
                 unknown, val = (True, 0) if q == "vague" else (unknown, q)
-            elif (mm := _M_SPLIT.fullmatch(s)):
+                continue
+            c = re.sub(r"^Then,?\s+", "", s)
+            c = c[:1].lower() + c[1:]
+            if (mm := _M_SPLIT.fullmatch(c)):
                 k = _qty(mm.group("k"))
                 if k == "vague":
                     unknown = True
                 elif k == 0:
                     return _nomatch("math: split by zero")
                 elif not unknown:
-                    val //= k
-            elif _M_DOUBLE.fullmatch(s):
+                    val = val // k if mm.group("mode") == "down" else -(-val // k)
+            elif (mm := _M_MULT.fullmatch(c)):
+                f = _MULT[mm.group("w")]
+                if mm.group("c") and _MULT_TAIL[mm.group("c")] != f - 1:
+                    return _nomatch(f"math: {mm.group('w')} does not agree with the sister warehouses")
                 if not unknown:
-                    val *= 2
-            elif (mm := _M_SHIP.fullmatch(s)):
-                a, b = _qty(mm.group("s")), _qty(mm.group("d"))
+                    val *= f
+            elif (mm := _M_DELIV.fullmatch(c)) or (mm := _M_SHIP.fullmatch(c)) or (mm := _M_RECV.fullmatch(c)):
+                a = _qty(mm.group("a"))
+                b = _qty(mm.group("b")) if mm.group("b") is not None else 1
                 if "vague" in (a, b):
                     unknown = True
                 elif not unknown:
-                    val -= a * b
-            elif (mm := _M_RECV.fullmatch(s)):
-                a, b = _qty(mm.group("r")), _qty(mm.group("q"))
-                if "vague" in (a, b):
-                    unknown = True
-                elif not unknown:
-                    val += a * b
+                    val += (-1 if c.startswith("it ships") else 1) * a * b
+            elif any(h.fullmatch(c) for h in _M_HOLES):
+                unknown = True
             else:
                 return _nomatch(f"math: unknown sentence {s[:40]!r}")
     except _NoMatch as e:
