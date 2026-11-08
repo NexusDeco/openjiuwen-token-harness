@@ -1,0 +1,70 @@
+{
+ "experiment": "the whole knowledge base (compact listing, ~720 tokens) added to the prompt of a search task; the idea was fewer tool steps",
+ "verdict": "rejected and removed: more expensive on every comparable task, no better answers",
+ "comparable_tasks_total_with": 2597.9,
+ "comparable_tasks_total_without": 1833.5,
+ "comparable_change_pct": 42,
+ "spent_all_five": 4742.7,
+ "correct": "3/5",
+ "tasks": {
+  "search_1001": {
+   "expected": "Dune Robotics",
+   "answer": "Dune Robotics",
+   "correct": true,
+   "spent": 665.6,
+   "steps": 3,
+   "end": "finished",
+   "without_inline_kb": {
+    "spent": 450.4,
+    "steps": 4,
+    "correct": true,
+    "cost_change_pct": 48
+   }
+  },
+  "search_1005": {
+   "expected": "2007",
+   "answer": "2007",
+   "correct": true,
+   "spent": 617.1,
+   "steps": 3,
+   "end": "finished",
+   "without_inline_kb": {
+    "spent": 427.8,
+    "steps": 4,
+    "correct": true,
+    "cost_change_pct": 44
+   }
+  },
+  "search_1009": {
+   "expected": "1990",
+   "answer": "1994",
+   "correct": false,
+   "spent": 1315.2,
+   "steps": 6,
+   "end": "finished",
+   "without_inline_kb": {
+    "spent": 955.3,
+    "steps": 7,
+    "correct": false,
+    "cost_change_pct": 38
+   }
+  },
+  "search_1013": {
+   "expected": "6",
+   "answer": "6",
+   "correct": true,
+   "spent": 573.5,
+   "steps": 3,
+   "end": "finished"
+  },
+  "search_1017": {
+   "expected": "1994",
+   "answer": null,
+   "correct": false,
+   "spent": 1571.3,
+   "steps": 7,
+   "end": "max-steps"
+  }
+ },
+ "why": "a no-reasoning model uses bash calls as its chain of thought (one hop per call) and ignores the hint that the files need not be read; each call now also resends the listing, and input counts at one tenth"
+}

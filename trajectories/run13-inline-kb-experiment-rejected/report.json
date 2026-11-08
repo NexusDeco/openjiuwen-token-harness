@@ -1,0 +1,54 @@
+{
+ "total_spent": 4742.7,
+ "llm_calls": 22,
+ "elapsed_s": 13.6,
+ "answered": 4,
+ "budget": 5000.0,
+ "tasks": {
+  "search_1005": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 617.1,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "search_1001": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 665.6,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "search_1009": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 1315.2,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 6,
+   "reason": "finished"
+  },
+  "search_1013": {
+   "status": "answered",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 573.5,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 3,
+   "reason": "finished"
+  },
+  "search_1017": {
+   "status": "no-answer",
+   "reward": 2.0,
+   "verified": null,
+   "spent": 1571.3,
+   "model": "qwen3.6-35b-a3b-noreason",
+   "steps": 7,
+   "reason": "max-steps"
+  }
+ }
+}

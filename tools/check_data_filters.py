@@ -32,6 +32,9 @@ def main() -> int:
     root = sys.argv[1]
     wss = [os.path.join(root, d, "workspace") for d in sorted(os.listdir(root))
            if d.startswith("data_analysis_") and os.path.isfile(os.path.join(root, d, "workspace", "sales.csv"))]
+    if not wss:
+        print("no data_analysis_* samples with a sales.csv found in", root)
+        return 2
     asked = wrong = nomatch = 0
     bad = []
     for ws in wss:
