@@ -35,9 +35,11 @@ import os
 import re
 import subprocess
 import sys
+import time
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Union
 
+import repair
 from prechecks import tests_flags
 from tasks import Task
 
@@ -415,11 +417,31 @@ CANON: Dict[str, str] = {
 }
 
 
+# Tests run in a child with hard memory / CPU limits: a buggy (or mutated) function that loops forever and appends to a
+# list would otherwise eat all RAM of the container before anything stops it. (No preexec_fn: unsafe with threads.)
+_TEST_WRAP = (
+    "import resource, runpy, sys\n"
+    "mb, cpu = int(sys.argv[1]), int(sys.argv[2])\n"
+    "try:\n"
+    "    resource.setrlimit(resource.RLIMIT_AS, (mb << 20, mb << 20))\n"
+    "    resource.setrlimit(resource.RLIMIT_CPU, (cpu, cpu))\n"
+    "except (ValueError, OSError):\n"
+    "    pass\n"
+    "sys.argv = ['test_mylib.py']\n"
+    "runpy.run_path('test_mylib.py', run_name='__main__')\n"
+)
+
+
+def _test_cmd(timeout: float) -> List[str]:
+    mb = os.environ.get("TEST_MEM_MB", "1024")
+    return [sys.executable, "-B", "-c", _TEST_WRAP, mb, str(int(timeout) + 1)]
+
+
 def _run_tests(ws: str, timeout: float = 60.0):
     """(all_passed, number_of_failing_tests). Unknown outcomes count as a huge number of failures."""
     env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp", "PYTHONDONTWRITEBYTECODE": "1"}
     try:
-        p = subprocess.run([sys.executable, "test_mylib.py"], cwd=ws, env=env, capture_output=True, text=True,
+        p = subprocess.run(_test_cmd(timeout), cwd=ws, env=env, capture_output=True, text=True,
                            errors="replace", timeout=timeout)
     except (subprocess.TimeoutExpired, OSError):
         return False, 10 ** 6
@@ -427,6 +449,27 @@ def _run_tests(ws: str, timeout: float = 60.0):
         return True, 0
     m = re.search(r"FAILED \((.*?)\)", p.stderr)
     return False, (sum(int(x) for x in re.findall(r"=(\d+)", m.group(1))) if m else 10 ** 6)
+
+
+def _run_tests_score(ws: str, timeout: float = 60.0):
+    """(all_passed, score) with score = (failing tests, -sum of the test-file line of each first failure): smaller is
+    better, and a failure that moves further down a test (an earlier assertion now passes) counts as progress."""
+    env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": "/tmp", "PYTHONDONTWRITEBYTECODE": "1"}
+    try:
+        p = subprocess.run(_test_cmd(timeout), cwd=ws, env=env, capture_output=True, text=True,
+                           errors="replace", timeout=timeout)
+    except (subprocess.TimeoutExpired, OSError):
+        return False, (10 ** 6, 0)
+    if p.returncode == 0:
+        return True, (0, 0)
+    m = re.search(r"FAILED \((.*?)\)", p.stderr)
+    nfail = sum(int(x) for x in re.findall(r"=(\d+)", m.group(1))) if m else 10 ** 6
+    depth = 0
+    for block in re.split(r"^={20,}$", p.stderr, flags=re.M)[1:]:
+        lines = re.findall(r'File "[^"]*test_mylib\.py", line (\d+)', block)
+        if lines:
+            depth += int(lines[-1])
+    return False, (nfail, -depth)
 
 
 def _write(path: str, src: str) -> None:
@@ -445,7 +488,9 @@ def solve_coding(text: str, workspace: Optional[str]) -> DetResult:
         return DetResult("unsolvable", why=f"coding: {flags[0]}", solver="coding")
     with open(lib, encoding="utf-8") as f:
         orig = f.read()
+    t_base = time.monotonic()
     ok0, fail0 = _run_tests(workspace)
+    t_base = time.monotonic() - t_base
     if ok0:
         return _nomatch("coding: no test fails, unexpected for this template")
     try:
@@ -473,6 +518,21 @@ def solve_coding(text: str, workspace: Optional[str]) -> DetResult:
     except Exception:
         _write(lib, orig)
         raise
+    # Stage 2: functions CANON does not know. Single-edit mutations verified against the real tests, in a copy of the
+    # workspace (repair.py); the result counts only if the whole test file passes.
+    if os.environ.get("NO_REPAIR") != "1":
+        try:
+            # unit tests of helpers are fast; a slow baseline is a runaway loop (memory cap, timeout), not a measure of speed
+            base = min(t_base, 0.5)
+            found = repair.search(cur, workspace, _run_tests_score, _run_tests_score(workspace)[1], baseline_s=base)
+        except Exception:
+            found = None
+        if found is not None:
+            fixed, steps = found
+            _write(lib, fixed)
+            if _run_tests(workspace)[0]:
+                return DetResult("answer", "DONE", why="mutation repair: " + "; ".join(steps), solver="coding")
+            _write(lib, cur)  # the copy and the real directory disagree: do not trust it
     if fcur >= fail0:
         _write(lib, orig)  # nothing helped: leave the file exactly as it was for the LLM
     return _nomatch(f"coding: still {fcur} failing test(s) after the known fixes")
