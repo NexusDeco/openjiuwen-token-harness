@@ -250,37 +250,5 @@
     }
    }
   ]
- },
- "probes": [
-  {
-   "path": "/usage",
-   "status": 403,
-   "body": "Forbidden"
-  },
-  {
-   "path": "/balance",
-   "status": 403,
-   "body": "Forbidden"
-  },
-  {
-   "path": "/credits",
-   "status": 403,
-   "body": "Forbidden"
-  },
-  {
-   "path": "/key",
-   "status": 403,
-   "body": "Forbidden"
-  },
-  {
-   "path": "/me",
-   "status": 403,
-   "body": "Forbidden"
-  },
-  {
-   "path": "/dashboard/billing/usage",
-   "status": 403,
-   "body": "Forbidden"
-  }
- ]
+ }
 }

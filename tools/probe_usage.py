@@ -1,4 +1,7 @@
-"""Step 2 probe: how the proxy reports token usage. Tiny calls only. Never prints the API key."""
+"""Step 2 probe: how the proxy reports token usage. Tiny calls only. Never prints the API key.
+
+It calls only /chat/completions. It does not look for balance or account endpoints: the proxy does not report the
+remaining budget (the organisers confirmed it), and probing service addresses is against the platform rules."""
 import json
 import os
 import sys
@@ -42,7 +45,7 @@ def interesting_headers(h):
     return {k: v for k, v in h.items() if any(s in k.lower() for s in HDR_HINTS)}
 
 
-results = {"chat": [], "stream": None, "probes": []}
+results = {"chat": [], "stream": None}
 total_in = total_out = 0
 
 print(f"== non-streaming chat, max_tokens={MAX_TOKENS} ==")
@@ -96,14 +99,6 @@ print(f"   http={status} chunks={n_chunks} usage chunks={json.dumps(usage_chunks
 for u in usage_chunks[-1:]:
     total_in += u.get("prompt_tokens", 0)
     total_out += u.get("completion_tokens", 0)
-
-print()
-print("== GET probes for a balance/usage endpoint (no tokens spent) ==")
-for p in ["/usage", "/balance", "/credits", "/key", "/me", "/dashboard/billing/usage"]:
-    status, headers, body, dt = call(p)
-    snippet = body.strip().replace("\n", " ")[:160]
-    results["probes"].append({"path": p, "status": status, "body": body[:2000]})
-    print(f"   GET {p}: http={status} body={snippet!r}")
 
 print()
 print(f"TOTAL spent in this probe: input={total_in} output={total_out} -> budget-equivalent output tokens = {total_out + total_in / 10:.1f}")
