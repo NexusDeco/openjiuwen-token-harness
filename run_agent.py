@@ -20,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor
 from budget import Ledger
 from det_solver import solve_deterministic
 from llm import FakeLLM, LLM
-from planner import make_plan
+from planner import Plan, make_plan
 from results import ResultStore, resolve_out
 from solver import ToolLoopSolver
 from tasks import load_tasks
@@ -66,17 +66,27 @@ def main() -> int:
             args.tasks_dir = positional.pop(0)
         if not args.out and positional:
             args.out = positional.pop(0)
+    if not args.tasks_dir and os.path.isdir("/data/tasks"):  # the mount point of the organisers' launch command
+        args.tasks_dir = "/data/tasks"
     if not args.tasks_dir or not os.path.isdir(args.tasks_dir):
         print("error: --tasks-dir (or TASKS) must point to the tasks directory", file=sys.stderr)
         return 2
 
     started = time.time()
     deadline = started + args.time_limit
-    os.makedirs(args.log_dir, exist_ok=True)
+    # Nothing below this line may stop the run before the first task: a log directory that cannot be created is only
+    # a lost log (every writer of these logs already tolerates OSError), never a lost answer.
+    try:
+        os.makedirs(args.log_dir, exist_ok=True)
+    except OSError as e:
+        print(f"[run] WARNING: cannot create the log directory {args.log_dir!r} ({type(e).__name__}); logging into "
+              f"{tempfile.gettempdir()}", file=sys.stderr, flush=True)
+        args.log_dir = tempfile.gettempdir()
     ledger = Ledger(total_budget=args.budget, per_task_cap=args.per_task_cap,
                     log_path=os.path.join(args.log_dir, "calls.jsonl"))
     base = key = None
     engine = args.engine
+    llm = None
     if args.fake_llm:
         if engine == "openjiuwen":
             print("error: --fake-llm cannot drive the openjiuwen engine (use tools/mock_llm_server.py instead)",
@@ -86,27 +96,33 @@ def main() -> int:
         llm = FakeLLM(ledger)
     else:
         base, key = os.environ.get("LLM_BASE_URL"), os.environ.get("LLM_API_KEY")
-        if not base or not key:
-            print("error: LLM_BASE_URL and LLM_API_KEY must be set", file=sys.stderr)
-            return 2
-        llm = LLM(base, key, ledger)
-    tiers = [t.strip() for t in os.environ.get("TIERS", "").split(",") if t.strip()] or None
-    solver_kw = dict(tiers=tiers, log_dir=os.path.join(args.log_dir, "traj"), auto_stop=not args.no_auto_stop)
-    loop_solver = ToolLoopSolver(llm, ledger, **solver_kw)
-    if engine in ("auto", "openjiuwen"):
-        try:
-            from ojw_solver import OjwSolver  # imports openjiuwen (slow, ~7 s) - only when this engine is selected
-            solver = OjwSolver(base, key, ledger, fallback=loop_solver if engine == "auto" else None, **solver_kw)
-        except Exception as e:
-            if engine == "openjiuwen":
-                raise
-            print(f"[run] WARNING: the openJiuwen engine could not be loaded ({type(e).__name__}: {str(e)[:120]}); "
-                  f"using the dependency-free chat loop instead", flush=True)
+        if base and key:
+            llm = LLM(base, key, ledger)
+        else:  # the template solvers need no model: still solve and save everything they can (0 tokens)
+            print("[run] WARNING: LLM_BASE_URL and/or LLM_API_KEY are not set: only the deterministic solvers will "
+                  "run, tasks that need the LLM stay unanswered", file=sys.stderr, flush=True)
+    solver = loop_solver = None
+    if llm is not None:
+        tiers = [t.strip() for t in os.environ.get("TIERS", "").split(",") if t.strip()] or None
+        solver_kw = dict(tiers=tiers, log_dir=os.path.join(args.log_dir, "traj"), auto_stop=not args.no_auto_stop)
+        loop_solver = ToolLoopSolver(llm, ledger, **solver_kw)
+        if engine in ("auto", "openjiuwen"):
+            try:
+                from ojw_solver import OjwSolver  # imports openjiuwen (slow, ~7 s) - only when this engine is selected
+                solver = OjwSolver(base, key, ledger, fallback=loop_solver if engine == "auto" else None, **solver_kw)
+            except Exception as e:
+                if engine == "openjiuwen":
+                    raise
+                print(f"[run] WARNING: the openJiuwen engine could not be loaded ({type(e).__name__}: "
+                      f"{str(e)[:120]}); using the dependency-free chat loop instead", flush=True)
+                solver = loop_solver
+        else:
             solver = loop_solver
+    if solver is None:
+        print("[run] engine: none (no LLM credentials)", flush=True)
     else:
-        solver = loop_solver
-    print(f"[run] engine: {'openjiuwen (ReActAgent)' if solver is not loop_solver else 'chat loop (no openjiuwen)'}; "
-          f"auto-stop {'off' if args.no_auto_stop else 'on'}", flush=True)
+        print(f"[run] engine: {'openjiuwen (ReActAgent)' if solver is not loop_solver else 'chat loop (no openjiuwen)'}; "
+              f"auto-stop {'off' if args.no_auto_stop else 'on'}", flush=True)
 
     store = ResultStore(resolve_out(args.out, os.environ.get("OUT")))
     done = store.load_existing() if args.resume else {}
@@ -149,8 +165,17 @@ def main() -> int:
         print(f"[det] solved without the LLM: {n_ans}, recognised as unsolvable: {n_uns}, "
               f"left for the LLM: {len(tasks) - len(done) - len(handled)}", flush=True)
 
-    plan = make_plan([t for t in tasks if t.id not in done and t.id not in handled],
-                     use_prechecks=not args.no_precheck)
+    rest = [t for t in tasks if t.id not in done and t.id not in handled]
+    try:
+        plan = make_plan(rest, use_prechecks=not args.no_precheck)
+    except Exception as e:  # a planner bug must not cost the tasks the LLM could still solve: plain reward order
+        print(f"[run] WARNING: planner failed ({type(e).__name__}: {str(e)[:80]}); using reward order", flush=True)
+        plan = Plan(order=sorted(rest, key=lambda t: -t.reward), est_cost={t.id: 600.0 for t in rest},
+                    p_success={t.id: 0.5 for t in rest})
+    if solver is None:  # no credentials: nothing can be sent to a model
+        for t in plan.order:
+            store.note(t.id, status="skipped", reason="no LLM credentials")
+        plan.order = []
     print(f"[run] {len(tasks)} tasks, {len(handled)} settled deterministically, {len(plan.order)} planned for the LLM, "
           f"{len(plan.skipped)} skipped as unlikely, {len(done)} already done; budget={args.budget}, "
           f"parallel={args.parallel}", flush=True)

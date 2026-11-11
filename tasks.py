@@ -40,6 +40,9 @@ def load_tasks(tasks_dir: str) -> List[Task]:
         except (OSError, ValueError) as e:
             print(f"[tasks] skip {name}: unreadable task.json ({type(e).__name__})", file=sys.stderr)
             continue
+        if not isinstance(meta, dict):
+            print(f"[tasks] skip {name}: task.json is not a JSON object", file=sys.stderr)
+            continue
         tid = str(meta.get("task_id") or name)
         ttype = str(meta.get("task_type") or tid.rsplit("_", 1)[0])
         try:

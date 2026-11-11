@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 import threading
 from typing import Any, Dict
 
@@ -14,11 +15,23 @@ from tasks import Task
 
 
 def resolve_out(arg_out: str | None, env_out: str | None) -> str:
-    """The rules call OUT 'the output file' but also run `mkdir -p "$OUT"`; accept both a file and a directory."""
-    p = arg_out or env_out or "/tmp/solutions.json"
+    """The rules call OUT 'the output file' but also run `mkdir -p "$OUT"`; accept both a file and a directory.
+
+    OUT may be a HOST path that does not exist inside the container (`-e OUT` forwards only the value) and the root
+    file system is read-only there, so creating its directory can fail. That must never stop the run: the answers the
+    organisers read are the answer.txt files in the task directories, this file is only a copy. Fall back to the
+    temporary directory (and say so) instead of dying before the first task."""
+    p = arg_out or env_out or os.path.join(tempfile.gettempdir(), "solutions.json")
     if p.endswith("/") or os.path.isdir(p) or not os.path.splitext(p)[1]:
         p = os.path.join(p, "solutions.json")
-    os.makedirs(os.path.dirname(os.path.abspath(p)), exist_ok=True)
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(p)), exist_ok=True)
+    except OSError as e:
+        fallback = os.path.join(tempfile.gettempdir(), "solutions.json")
+        print(f"[results] WARNING: cannot create the directory for the solutions file {p!r} ({type(e).__name__}: {e}); "
+              f"keeping that copy in {fallback}. answer.txt in every task directory is not affected.",
+              file=sys.stderr, flush=True)
+        p = fallback
     return p
 
 

@@ -5,7 +5,7 @@
 #   tools/run_all_checks.sh [SAMPLES_DIR] [--quick] [--docker]
 #
 #   SAMPLES_DIR  the organisers' sample task directories (default: $SAMPLES or ../task-dir/task-dir)
-#   --quick      skip the slow suites (deterministic-solver sweep, bug zoo): about 40 s instead of about 4 minutes
+#   --quick      skip the slow suites (deterministic-solver sweep, bug zoo): about 1 minute instead of about 4 minutes
 #   --docker     also build the image and run tools/smoke_image.sh (needs access to Docker)
 #
 # Exit status 0 only if every suite passed. Needs only the Python 3 standard library.
@@ -56,6 +56,7 @@ run() {  # run "name" command...
 
 echo "samples: $SAMPLES"
 echo "== fast suites"
+run "startup: odd OUT / LOG_DIR / no key / TASKS-only (8 scenarios)"    python3 -I tools/check_startup.py "$SAMPLES"
 run "edge cases (71 borderline cases of the detectors)"                python3 tools/check_edge_cases.py
 run "search: mentor chains, paraphrases (real kb, independent walk)"    python3 -I tools/check_search_chains.py "$SAMPLES"
 run "data_analysis: composable filters (real sales.csv)"                python3 -I tools/check_data_filters.py "$SAMPLES"
